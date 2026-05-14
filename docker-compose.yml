@@ -1,0 +1,14 @@
+services:
+  market-impact-radar:
+    build: .
+    container_name: market-impact-radar
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./data:/app/data
+    environment:
+      DATABASE_URL: sqlite:////app/data/market_impact_radar.db
+    restart: unless-stopped

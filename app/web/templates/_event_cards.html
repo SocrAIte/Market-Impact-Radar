@@ -1,0 +1,64 @@
+{% for row in rows %}
+  {% set cluster = row.cluster %}
+  {% set analysis = row.analysis %}
+  {% set view = row.view %}
+  {% set score_class = "high" if analysis.market_impact_score >= 85 else ("medium" if analysis.market_impact_score >= stats.push_threshold else "") %}
+  <article class="event-card p-4" data-cluster-id="{{ cluster.id }}">
+    <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
+      <div>
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <span class="badge rounded-pill badge-soft">{{ view.event_type }}</span>
+          <span class="badge rounded-pill text-bg-light">{{ view.direction }}</span>
+          <span class="badge rounded-pill text-bg-light">{{ view.horizon }}</span>
+          {% if analysis.should_push %}
+            <span class="badge rounded-pill text-bg-warning">达到推送条件</span>
+          {% endif %}
+        </div>
+        <h2 class="h4 mb-2">
+          <a href="/events/{{ cluster.id }}" class="text-decoration-none text-dark">{{ view.headline_zh }}</a>
+        </h2>
+        {% if view.headline_en %}
+          <div class="small text-secondary mb-2">English title: {{ view.headline_en }}</div>
+        {% endif %}
+        {% if row.source_labels %}
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            {% for source in row.source_labels %}
+              <span class="source-chip {% if source.is_domestic %}domestic{% endif %}">
+                {{ source.label }} · {{ source.name }}{% if source.count > 1 %} ×{{ source.count }}{% endif %}
+              </span>
+            {% endfor %}
+          </div>
+        {% endif %}
+        <p class="text-secondary mb-3">{{ view.impact_explanation }}</p>
+        <div class="d-flex flex-wrap align-items-center gap-2 small text-secondary">
+          <span>
+            来源 {{ cluster.source_count }} 个 · 新闻 {{ cluster.article_count }} 篇
+            {% if row.top_source_published_at %} · 发布时间 {{ row.top_source_published_at }}{% endif %}
+            {% if row.top_source_fetched_at %} · 抓取时间 {{ row.top_source_fetched_at }}{% endif %}
+          </span>
+          <button
+            class="btn btn-dark btn-sm rounded-pill py-0 js-reanalyze-event"
+            type="button"
+            data-cluster-id="{{ cluster.id }}"
+          >
+            API 分析
+          </button>
+          <span class="js-reanalyze-status text-secondary" data-cluster-id="{{ cluster.id }}"></span>
+          {% if row.top_source_url %}
+            <button
+              class="btn btn-outline-dark btn-sm rounded-pill py-0 js-copy-source"
+              type="button"
+              data-url="{{ row.top_source_url }}"
+            >
+              转发来源链接
+            </button>
+          {% endif %}
+        </div>
+      </div>
+      <div class="text-lg-end flex-shrink-0">
+        <div class="score-pill {{ score_class }}">{{ "%.1f"|format(analysis.market_impact_score) }}</div>
+        <div class="small text-secondary mt-2">置信度 {{ view.confidence }}</div>
+      </div>
+    </div>
+  </article>
+{% endfor %}

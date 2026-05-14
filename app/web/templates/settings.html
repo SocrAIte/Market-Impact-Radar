@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>系统设置 - Market Impact Radar</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      :root {
+        --ink: #102027;
+        --muted: #607078;
+        --line: rgba(16, 32, 39, .1);
+        --green: #0f766e;
+        --red: #b42318;
+      }
+      body {
+        min-height: 100vh;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 16% 8%, rgba(15, 118, 110, .18), transparent 30rem),
+          radial-gradient(circle at 82% 12%, rgba(194, 120, 3, .18), transparent 32rem),
+          linear-gradient(135deg, #f1f8f5 0%, #f7f1e6 100%);
+        font-family: "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", sans-serif;
+      }
+      .shell { max-width: 1120px; }
+      .glass {
+        border: 1px solid rgba(255, 255, 255, .72);
+        border-radius: 1.6rem;
+        background: rgba(255, 255, 255, .84);
+        box-shadow: 0 24px 70px rgba(26, 45, 52, .12);
+        backdrop-filter: blur(14px);
+      }
+      .config-card {
+        border: 1px solid var(--line);
+        border-radius: 1.2rem;
+        background: rgba(255, 255, 255, .76);
+      }
+      .option-name, .muted { color: var(--muted); }
+      .status-dot {
+        width: .65rem;
+        height: .65rem;
+        border-radius: 999px;
+        background: #94a3b8;
+      }
+      .status-dot.on { background: var(--green); box-shadow: 0 0 0 .35rem rgba(15, 118, 110, .12); }
+      .result-line { min-height: 1.45rem; }
+      .result-line.ok { color: var(--green); }
+      .result-line.fail { color: var(--red); }
+      .help-dot {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.15rem;
+        height: 1.15rem;
+        margin-left: .35rem;
+        border-radius: 999px;
+        color: white;
+        background: var(--green);
+        font-size: .72rem;
+        cursor: help;
+      }
+      .help-dot::after {
+        content: attr(data-tip);
+        position: absolute;
+        z-index: 5;
+        left: 50%;
+        bottom: calc(100% + .65rem);
+        width: min(20rem, 70vw);
+        transform: translateX(-50%) translateY(.25rem);
+        border-radius: .85rem;
+        padding: .75rem .85rem;
+        color: #f8fffc;
+        background: #102027;
+        box-shadow: 0 18px 48px rgba(16, 32, 39, .24);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .15s ease, transform .15s ease;
+        font-weight: 500;
+        line-height: 1.55;
+        text-align: left;
+      }
+      .help-dot:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+      code { color: var(--green); }
+      textarea { min-height: 7rem; }
+      .settings-main {
+        display: flex;
+        flex-direction: column;
+      }
+      .order-integrations { order: 1; }
+      .order-runtime { order: 2; }
+      .order-scoring { order: 3; }
+      .order-base-sources { order: 4; }
+      .order-domestic { order: 5; }
+      .order-crawl { order: 6; }
+    </style>
+  </head>
+  <body>
+    <main class="container shell settings-main py-4 py-lg-5">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <a href="/" class="btn btn-outline-dark rounded-pill px-3">返回雷达</a>
+      </div>
+
+      <section class="glass order-integrations p-4 p-lg-5 mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-4">
+          <div>
+            <h2 class="h4 fw-bold mb-1">
+              外部接口配置
+            </h2>
+            <p class="text-secondary mb-0">保存后立即写入本地配置；测试按钮会真实请求对应服务。</p>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-xl-4 col-lg-6">
+            <form class="config-card p-3 h-100 js-save-form" data-endpoint="/api/config/integrations">
+              <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="status-dot {% if settings_view.llm.configured %}on{% endif %}"></span>
+                <h3 class="h5 fw-bold mb-0">
+                  LLM
+                  <span class="help-dot" data-tip="兼容 OpenAI API 的模型接口。用于把事件聚类结果转成中文摘要、影响路径、资产映射和置信度。">?</span>
+                </h3>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small fw-semibold">Base URL</label>
+                <input class="form-control" name="llm_base_url" value="{{ settings_view.llm.base_url }}" placeholder="https://api.openai.com/v1">
+              </div>
+              <div class="mb-2">
+                <label class="form-label small fw-semibold">Model</label>
+                <input class="form-control" name="llm_model" value="{{ settings_view.llm.model }}" placeholder="gpt-4o-mini">
+              </div>
+              <div class="mb-3">
+                <label class="form-label small fw-semibold">API Key</label>
+                <input class="form-control" name="llm_api_key" type="password" placeholder="{{ settings_view.llm.key_placeholder }}">
+              </div>
+              <p class="small text-secondary mb-3">用于中文标题、摘要、影响解释和评分校准。</p>
+              <div class="small mb-3">
+                <span class="fw-semibold">当前状态：</span>
+                <span
+                  class="{% if settings_view.llm.status.level == 'ok' %}text-success{% elif settings_view.llm.status.level == 'fail' %}text-danger{% elif settings_view.llm.status.level == 'warn' %}text-warning{% else %}text-secondary{% endif %}"
+                  data-llm-status
+                >
+                  {{ settings_view.llm.status.label }} · {{ settings_view.llm.status.message }}
+                </span>
+              </div>
+              <div class="d-flex gap-2">
+                <button class="btn btn-success rounded-pill px-4" type="submit">保存</button>
+                <button class="btn btn-outline-dark rounded-pill px-4 js-test" type="button" data-service="llm">测试</button>
+              </div>
+              <div class="result-line small mt-3"></div>
+            </form>
+          </div>
+
+          <div class="col-xl-4 col-lg-6">
+            <form class="config-card p-3 h-100 js-save-form" data-endpoint="/api/config/integrations">
+              <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="status-dot {% if settings_view.wecom.configured %}on{% endif %}"></span>
+                <h3 class="h5 fw-bold mb-0">
+                  企业微信机器人
+                  <span class="help-dot" data-tip="把达到推送阈值的事件发送到企业微信群。消息包含分数、方向、周期、影响路径、原文链接和免责声明。">?</span>
+                </h3>
+              </div>
+              <div class="mb-3">
+                <label class="form-label small fw-semibold">Webhook URL</label>
+                <input class="form-control" name="wecom_webhook_url" type="password" placeholder="{{ settings_view.wecom.placeholder }}">
+              </div>
+              <div class="d-flex gap-2">
+                <button class="btn btn-success rounded-pill px-4" type="submit">保存</button>
+                <button class="btn btn-outline-dark rounded-pill px-4 js-test" type="button" data-service="wecom">测试</button>
+              </div>
+              <div class="result-line small mt-3"></div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section class="glass order-crawl p-4 p-lg-5 mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-4">
+          <div>
+            <h2 class="h4 fw-bold mb-1">
+              新闻抓取配置
+            </h2>
+            <p class="text-secondary mb-0">启用后会参与下一次“立即扫描并分析”。</p>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <form class="config-card p-3 h-100 js-save-form" data-endpoint="/api/config/source/newsapi">
+              <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="status-dot {% if settings_view.newsapi.enabled and settings_view.newsapi.configured %}on{% endif %}"></span>
+                <h3 class="h5 fw-bold mb-0">
+                  NewsAPI
+                  <span class="help-dot" data-tip="按关键词、语言和媒体覆盖面检索新闻。适合补充 GDELT/RSS 没覆盖到的英文财经新闻。">?</span>
+                </h3>
+              </div>
+              <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" role="switch" name="enabled" {% if settings_view.newsapi.enabled %}checked{% endif %}>
+                <label class="form-check-label">启用 NewsAPI 抓取</label>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small fw-semibold">API Key</label>
+                <input class="form-control" name="newsapi_api_key" type="password" placeholder="{{ settings_view.newsapi.key_placeholder }}">
+              </div>
+              <div class="row g-2">
+                <div class="col-6">
+                  <label class="form-label small fw-semibold">Language</label>
+                  <input class="form-control" name="language" value="{{ settings_view.newsapi.language }}">
+                </div>
+                <div class="col-6">
+                  <label class="form-label small fw-semibold">Max Results</label>
+                  <input class="form-control" name="max_results" type="number" min="1" max="100" value="{{ settings_view.newsapi.max_results }}">
+                </div>
+              </div>
+              <div class="my-3">
+                <label class="form-label small fw-semibold">Keywords</label>
+                <textarea class="form-control" name="keywords">{{ settings_view.newsapi.keywords }}</textarea>
+              </div>
+              <div class="d-flex gap-2">
+                <button class="btn btn-success rounded-pill px-4" type="submit">保存</button>
+                <button class="btn btn-outline-dark rounded-pill px-4 js-test" type="button" data-service="newsapi">测试</button>
+              </div>
+              <div class="result-line small mt-3"></div>
+            </form>
+          </div>
+
+          <div class="col-lg-6">
+            <form class="config-card p-3 h-100 js-save-form" data-endpoint="/api/config/source/alphavantage">
+              <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="status-dot {% if settings_view.alphavantage.enabled and settings_view.alphavantage.configured %}on{% endif %}"></span>
+                <h3 class="h5 fw-bold mb-0">
+                  Alpha Vantage
+                  <span class="help-dot" data-tip="按 ticker 获取相关新闻和情绪信息。适合补充 SPY、QQQ、NVDA 等资产相关事件。">?</span>
+                </h3>
+              </div>
+              <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" role="switch" name="enabled" {% if settings_view.alphavantage.enabled %}checked{% endif %}>
+                <label class="form-check-label">启用 Alpha Vantage 抓取</label>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small fw-semibold">API Key</label>
+                <input class="form-control" name="alpha_vantage_api_key" type="password" placeholder="{{ settings_view.alphavantage.key_placeholder }}">
+              </div>
+              <div class="mb-2">
+                <label class="form-label small fw-semibold">Tickers</label>
+                <input class="form-control" name="tickers" value="{{ settings_view.alphavantage.tickers }}" placeholder="SPY, QQQ, NVDA">
+              </div>
+              <div class="row g-2 mb-3">
+                <div class="col-8">
+                  <label class="form-label small fw-semibold">Topics</label>
+                  <input class="form-control" name="topics" value="{{ settings_view.alphavantage.topics }}">
+                </div>
+                <div class="col-4">
+                  <label class="form-label small fw-semibold">Max</label>
+                  <input class="form-control" name="max_results" type="number" min="1" max="1000" value="{{ settings_view.alphavantage.max_results }}">
+                </div>
+              </div>
+              <div class="d-flex gap-2">
+                <button class="btn btn-success rounded-pill px-4" type="submit">保存</button>
+                <button class="btn btn-outline-dark rounded-pill px-4 js-test" type="button" data-service="alphavantage">测试</button>
+              </div>
+              <div class="result-line small mt-3"></div>
+            </form>
+          </div>
+
+        </div>
+      </section>
+
+      <section class="glass order-domestic p-4 p-lg-5 mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-4">
+          <div>
+            <h2 class="h4 fw-bold mb-1">国内新闻源</h2>
+            <p class="text-secondary mb-0">选择需要抓取的国内财经、监管、交易所和主流媒体来源。</p>
+          </div>
+        </div>
+        <form class="config-card p-3 js-save-form" data-endpoint="/api/config/source/china_sites">
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <div class="d-flex align-items-center gap-2">
+              <span class="status-dot {% if settings_view.china_sites.enabled %}on{% endif %}"></span>
+              <h3 class="h5 fw-bold mb-0">站点选择</h3>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <label class="small fw-semibold mb-0">最多抓取</label>
+              <input class="form-control form-control-sm" style="width: 7rem;" name="max_results" type="number" min="1" value="{{ settings_view.china_sites.max_results }}">
+            </div>
+          </div>
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" role="switch" name="enabled" {% if settings_view.china_sites.enabled %}checked{% endif %}>
+            <label class="form-check-label">启用国内新闻网站抓取</label>
+          </div>
+          <div class="row g-2">
+            {% for site in settings_view.china_sites.sites %}
+              <div class="col-md-6 col-xl-4">
+                <label class="border rounded-4 p-3 d-block h-100 bg-white bg-opacity-75">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="site_{{ site.index }}" {% if site.enabled %}checked{% endif %}>
+                    <span class="form-check-label fw-semibold">{{ site.name }}</span>
+                  </div>
+                  <div class="small text-secondary mt-2">{{ site.url }}</div>
+                </label>
+              </div>
+            {% endfor %}
+          </div>
+          <div class="row g-2 mt-3">
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">新增新闻源名称</label>
+              <input class="form-control" name="new_site_name" placeholder="例如：财新">
+            </div>
+            <div class="col-md-8">
+              <label class="form-label small fw-semibold">新增新闻源地址</label>
+              <input class="form-control" name="new_site_url" placeholder="https://example.com/">
+            </div>
+          </div>
+          <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-success rounded-pill px-4" type="submit">保存新闻源</button>
+          </div>
+          <div class="result-line small mt-3"></div>
+        </form>
+      </section>
+
+      <section class="glass order-scoring p-4 p-lg-5 mb-4">
+        <h2 class="h4 fw-bold mb-3">
+          评分与推送配置
+        </h2>
+        <form class="js-save-form" data-endpoint="/api/config/scoring">
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              <div class="config-card p-3 h-100">
+                <label class="form-label small fw-semibold">推送门槛分数</label>
+                <input class="form-control" name="push_score_threshold" type="number" min="0" max="100" step="1" value="{{ settings_view.scoring.push_score_threshold }}">
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="config-card p-3 h-100">
+                <label class="form-label small fw-semibold">重复推送保护（小时）</label>
+                <input class="form-control" name="duplicate_push_window_hours" type="number" min="1" step="1" value="{{ settings_view.scoring.duplicate_push_window_hours }}">
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="config-card p-3 h-100">
+                <label class="form-label small fw-semibold">允许重推的分数提升</label>
+                <input class="form-control" name="score_delta_for_repush" type="number" min="0" max="100" step="1" value="{{ settings_view.scoring.score_delta_for_repush }}">
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            {% for weight in settings_view.scoring.weights %}
+              <div class="col-md-6">
+                <div class="config-card p-3 h-100">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label class="form-label small fw-semibold mb-0" for="weight_{{ weight.key }}">
+                      {{ weight.name }}
+                      <span class="help-dot" data-tip="{{ weight.help }}">?</span>
+                    </label>
+                    <span class="small text-secondary"><span class="js-weight-value">{{ "%.2f"|format(weight.value) }}</span></span>
+                  </div>
+                  <input
+                    id="weight_{{ weight.key }}"
+                    class="form-range js-weight-slider"
+                    name="weight_{{ weight.key }}"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value="{{ weight.value }}"
+                    data-default="{{ weight.default }}"
+                  >
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+
+          <div class="d-flex flex-wrap gap-2 mt-4">
+            <button class="btn btn-success rounded-pill px-4" type="submit">保存评分配置</button>
+            <button class="btn btn-outline-dark rounded-pill px-4" id="resetScoringBtn" type="button">一键恢复默认</button>
+          </div>
+          <div class="result-line small mt-3"></div>
+        </form>
+      </section>
+
+      <section class="glass order-base-sources p-4 p-lg-5">
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-4">
+          <div>
+            <h2 class="h4 fw-bold mb-1">基础数据源设置</h2>
+            <p class="text-secondary mb-0">当前启用 {{ settings_view.sources.enabled_count }} 个数据源模块。</p>
+          </div>
+          <a class="btn btn-success rounded-pill px-4" href="/">去扫描</a>
+        </div>
+        <div class="row g-3">
+          <div class="col-lg-4">
+            <form class="config-card p-3 h-100 js-save-form" data-endpoint="/api/config/source/gdelt">
+              <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="status-dot {% if settings_view.gdelt.enabled %}on{% endif %}"></span>
+                <h3 class="h5 fw-bold mb-0">GDELT</h3>
+              </div>
+              <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" role="switch" name="enabled" {% if settings_view.gdelt.enabled %}checked{% endif %}>
+                <label class="form-check-label">启用全球新闻抓取</label>
+              </div>
+              <label class="form-label small fw-semibold">最多抓取</label>
+              <input class="form-control mb-3" name="max_results" type="number" min="1" max="250" value="{{ settings_view.gdelt.max_results }}">
+              <label class="form-label small fw-semibold">关键词</label>
+              <textarea class="form-control mb-3" name="keywords">{{ settings_view.gdelt.keywords }}</textarea>
+              <button class="btn btn-success rounded-pill px-4" type="submit">保存</button>
+              <div class="result-line small mt-3"></div>
+            </form>
+          </div>
+
+          <div class="col-lg-4">
+            <form class="config-card p-3 h-100 js-save-form" data-endpoint="/api/config/source/sec_edgar">
+              <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="status-dot {% if settings_view.sec_edgar.enabled %}on{% endif %}"></span>
+                <h3 class="h5 fw-bold mb-0">SEC EDGAR</h3>
+              </div>
+              <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" role="switch" name="enabled" {% if settings_view.sec_edgar.enabled %}checked{% endif %}>
+                <label class="form-check-label">启用美股公告抓取</label>
+              </div>
+              <label class="form-label small fw-semibold">最多抓取</label>
+              <input class="form-control mb-3" name="max_results" type="number" min="1" max="200" value="{{ settings_view.sec_edgar.max_results }}">
+              <label class="form-label small fw-semibold">公告类型</label>
+              <input class="form-control mb-3" name="forms" value="{{ settings_view.sec_edgar.forms }}" placeholder="8-K, 10-Q, 10-K">
+              <button class="btn btn-success rounded-pill px-4" type="submit">保存</button>
+              <div class="result-line small mt-3"></div>
+            </form>
+          </div>
+
+          <div class="col-lg-4">
+            <form class="config-card p-3 h-100 js-save-form" data-endpoint="/api/config/source/rss">
+              <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="status-dot {% if settings_view.rss.enabled %}on{% endif %}"></span>
+                <h3 class="h5 fw-bold mb-0">RSS</h3>
+              </div>
+              <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" role="switch" name="enabled" {% if settings_view.rss.enabled %}checked{% endif %}>
+                <label class="form-check-label">启用 RSS 抓取</label>
+              </div>
+              <label class="form-label small fw-semibold">最多抓取</label>
+              <input class="form-control mb-3" name="max_results" type="number" min="1" max="500" value="{{ settings_view.rss.max_results }}">
+              <div class="d-grid gap-2 mb-3" style="max-height: 18rem; overflow: auto;">
+                {% for feed in settings_view.rss.feeds %}
+                  <label class="border rounded-4 p-2 bg-white bg-opacity-75">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="feed_{{ feed.index }}" {% if feed.enabled %}checked{% endif %}>
+                      <span class="form-check-label fw-semibold">{{ feed.name }}</span>
+                    </div>
+                    <div class="small text-secondary">{{ feed.source_type }} · {{ feed.language }}</div>
+                  </label>
+                {% endfor %}
+              </div>
+              <button class="btn btn-success rounded-pill px-4" type="submit">保存</button>
+              <div class="result-line small mt-3"></div>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      function setResult(form, ok, message) {
+        const line = form.querySelector(".result-line");
+        if (!line) return;
+        line.classList.remove("ok", "fail");
+        line.classList.add(ok ? "ok" : "fail");
+        line.textContent = message;
+      }
+
+      function encodedForm(form) {
+        return new URLSearchParams(new FormData(form));
+      }
+
+      async function postForm(url, form) {
+        const response = await fetch(url, { method: "POST", body: encodedForm(form) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || data.message || `HTTP ${response.status}`);
+        return data;
+      }
+
+      document.querySelectorAll(".js-save-form").forEach((form) => {
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          try {
+            const data = await postForm(form.dataset.endpoint, form);
+            setResult(form, true, data.message || "已保存。");
+            const enabledInput = form.querySelector("[name='enabled']");
+            const statusDot = form.querySelector(".status-dot");
+            if (enabledInput && statusDot) {
+              statusDot.classList.toggle("on", enabledInput.checked);
+            }
+          } catch (error) {
+            setResult(form, false, error.message || "保存失败。");
+          }
+        });
+      });
+
+      document.querySelectorAll(".js-test").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const form = button.closest("form");
+          const service = button.dataset.service;
+          button.disabled = true;
+          setResult(form, true, "正在测试...");
+          try {
+            let body = encodedForm(form);
+            if (service === "llm") {
+              body = new URLSearchParams();
+              body.append("base_url", form.querySelector("[name='llm_base_url']")?.value || "");
+              body.append("api_key", form.querySelector("[name='llm_api_key']")?.value || "");
+              body.append("model", form.querySelector("[name='llm_model']")?.value || "");
+            } else if (service === "wecom") {
+              body = new URLSearchParams();
+              body.append("webhook_url", form.querySelector("[name='wecom_webhook_url']")?.value || "");
+            } else if (service === "newsapi") {
+              body = new URLSearchParams();
+              body.append("api_key", form.querySelector("[name='newsapi_api_key']")?.value || "");
+            } else if (service === "alphavantage") {
+              body = new URLSearchParams();
+              body.append("api_key", form.querySelector("[name='alpha_vantage_api_key']")?.value || "");
+            }
+            const response = await fetch(`/api/config/test/${service}`, { method: "POST", body });
+            const data = await response.json();
+            setResult(form, Boolean(data.ok), data.message || "测试完成。");
+            if (service === "llm") updateLlmStatus(Boolean(data.ok), data.message || "");
+          } catch (error) {
+            setResult(form, false, error.message || "测试失败。");
+            if (service === "llm") updateLlmStatus(false, error.message || "测试失败。");
+          } finally {
+            button.disabled = false;
+          }
+        });
+      });
+
+      document.querySelectorAll(".js-weight-slider").forEach((slider) => {
+        const valueEl = slider.closest(".config-card")?.querySelector(".js-weight-value");
+        slider.addEventListener("input", () => {
+          if (valueEl) valueEl.textContent = Number(slider.value).toFixed(2);
+        });
+      });
+
+      document.getElementById("resetScoringBtn")?.addEventListener("click", async () => {
+        const form = document.querySelector("[data-endpoint='/api/config/scoring']");
+        const button = document.getElementById("resetScoringBtn");
+        button.disabled = true;
+        setResult(form, true, "正在恢复默认...");
+        try {
+          const response = await fetch("/api/config/scoring/defaults", { method: "POST" });
+          const data = await response.json();
+          if (!response.ok || !data.ok) throw new Error(data.message || `HTTP ${response.status}`);
+          const scoring = data.scoring || {};
+          form.querySelector("[name='push_score_threshold']").value = scoring.push_score_threshold ?? 70;
+          form.querySelector("[name='duplicate_push_window_hours']").value = scoring.duplicate_push_window_hours ?? 12;
+          form.querySelector("[name='score_delta_for_repush']").value = scoring.score_delta_for_repush ?? 15;
+          Object.entries(scoring.weights || {}).forEach(([key, value]) => {
+            const slider = form.querySelector(`[name='weight_${key}']`);
+            if (!slider) return;
+            slider.value = value;
+            const valueEl = slider.closest(".config-card")?.querySelector(".js-weight-value");
+            if (valueEl) valueEl.textContent = Number(value).toFixed(2);
+          });
+          setResult(form, true, data.message || "已恢复默认评分配置。");
+        } catch (error) {
+          setResult(form, false, error.message || "恢复默认失败。");
+        } finally {
+          button.disabled = false;
+        }
+      });
+
+      function updateLlmStatus(ok, message) {
+        const status = document.querySelector("[data-llm-status]");
+        if (!status) return;
+        status.classList.remove("text-success", "text-danger", "text-warning", "text-secondary");
+        status.classList.add(ok ? "text-success" : "text-danger");
+        status.textContent = ok
+          ? "测试通过 · LLM API 可用于扫描分析和事件重新分析。"
+          : `测试失败 · ${message || "请检查 Base URL、API Key 和模型名称。"}`;
+      }
+    </script>
+  </body>
+</html>

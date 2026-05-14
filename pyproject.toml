@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "market-impact-radar"
+version = "0.1.0"
+description = "Global stock-market impact news radar with explainable event clustering, scoring, and WeCom alerts."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "market-impact-radar contributors" }]
+keywords = ["finance", "news", "fastapi", "llm", "market-impact", "rss", "gdelt"]
+dependencies = [
+  "apscheduler>=3.10.4",
+  "beautifulsoup4>=4.12.3",
+  "fastapi>=0.115.0",
+  "feedparser>=6.0.11",
+  "httpx>=0.27.0",
+  "jinja2>=3.1.4",
+  "loguru>=0.7.2",
+  "pydantic>=2.7.0",
+  "pydantic-settings>=2.3.0",
+  "python-dateutil>=2.9.0",
+  "python-dotenv>=1.0.1",
+  "pyyaml>=6.0.2",
+  "sqlalchemy>=2.0.30",
+  "uvicorn[standard]>=0.30.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2.0",
+  "pytest-asyncio>=0.23.7",
+  "respx>=0.21.1",
+  "ruff>=0.5.0",
+]
+postgres = ["psycopg[binary]>=3.2.0"]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]

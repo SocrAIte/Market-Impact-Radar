@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ view.headline_zh }} - Market Impact Radar</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      :root {
+        --ink: #102027;
+        --muted: #607078;
+        --line: rgba(16, 32, 39, .1);
+        --green: #0f766e;
+      }
+      body {
+        min-height: 100vh;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 12% 10%, rgba(15, 118, 110, .16), transparent 32rem),
+          linear-gradient(135deg, #f1f8f5 0%, #f7f1e6 100%);
+        font-family: "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", sans-serif;
+      }
+      .shell { max-width: 1120px; }
+      .glass {
+        border: 1px solid rgba(255, 255, 255, .72);
+        border-radius: 1.5rem;
+        background: rgba(255, 255, 255, .84);
+        box-shadow: 0 24px 70px rgba(26, 45, 52, .12);
+        backdrop-filter: blur(14px);
+      }
+      .score {
+        display: inline-flex;
+        min-width: 5.5rem;
+        justify-content: center;
+        border-radius: 999px;
+        padding: .45rem .9rem;
+        color: white;
+        background: var(--green);
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+      }
+      .source-item {
+        border: 1px solid var(--line);
+        border-radius: 1rem;
+        background: rgba(255, 255, 255, .72);
+      }
+      .text-muted-2 { color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <main class="container shell py-4 py-lg-5">
+      <a href="/" class="btn btn-outline-dark rounded-pill px-3 mb-4">返回雷达</a>
+
+      <section class="glass p-4 p-lg-5 mb-4">
+        <div class="d-flex flex-column flex-lg-row justify-content-between gap-4">
+          <div>
+            <div class="small text-uppercase fw-bold text-success mb-3">Event Detail / 事件详情</div>
+            <h1 class="display-6 fw-bold mb-3">{{ view.headline_zh }}</h1>
+            {% if view.headline_en %}
+              <p class="fs-5 text-muted-2 mb-3">English title: {{ view.headline_en }}</p>
+            {% endif %}
+            <p class="text-muted-2 mb-1">Cluster Key: <code>{{ cluster.cluster_key }}</code></p>
+            <p class="text-muted-2 mb-0">状态 {{ view.status }} · 来源 {{ cluster.source_count }} 个 · 新闻 {{ cluster.article_count }} 篇</p>
+          </div>
+          {% if analysis %}
+            <div class="text-lg-end">
+              <div class="score">{{ "%.1f"|format(analysis.market_impact_score) }}</div>
+              <div class="small text-muted-2 mt-2">{{ view.direction }} · {{ view.horizon }} · 置信度 {{ view.confidence }}</div>
+            </div>
+          {% endif %}
+        </div>
+      </section>
+
+      {% if analysis %}
+        <section class="glass p-4 mb-4">
+          <h2 class="h4 fw-bold mb-3">影响分析</h2>
+          {% if view.analysis_status %}
+            <div class="alert alert-{{ view.analysis_status.level }} rounded-4 border-0 mb-4">
+              <div class="fw-bold">{{ view.analysis_status.title }}</div>
+              <div class="small">{{ view.analysis_status.message }}</div>
+              {% if view.analysis_status.can_reanalyze %}
+                <button id="reanalyzeBtn" class="btn btn-sm btn-dark rounded-pill mt-3" type="button" data-cluster-id="{{ cluster.id }}">
+                  用 API 重新分析
+                </button>
+                <span id="reanalyzeStatus" class="small ms-2"></span>
+              {% endif %}
+            </div>
+          {% endif %}
+          <div class="row g-3">
+            <div class="col-lg-8">
+              <p><strong>一句话摘要：</strong>{{ view.headline_zh }}</p>
+              {% if view.headline_en %}
+                <p><strong>原始英文标题：</strong>{{ view.headline_en }}</p>
+              {% endif %}
+              <p><strong>事件类型：</strong>{{ view.event_type }}</p>
+              <p><strong>影响方向：</strong>{{ view.direction }}</p>
+              <p><strong>影响周期：</strong>{{ view.horizon }}</p>
+              <p><strong>影响路径：</strong>{{ view.impact_explanation }}</p>
+              <p><strong>主要不确定性：</strong>{{ view.uncertainties | join("；") }}</p>
+              <p class="mb-0"><strong>推送判断：</strong>{{ view.push_reason }}</p>
+            </div>
+            <div class="col-lg-4">
+              <div class="source-item p-3">
+                <div class="fw-bold mb-2">可能影响资产</div>
+                {% for asset in view.assets %}
+                  <div class="small mb-2">
+                    <strong>{{ asset.name }}</strong>
+                    <span class="text-muted-2"> · {{ asset.direction }} · {{ asset.horizon }}</span>
+                    <div class="text-muted-2">{{ asset.reason }}</div>
+                  </div>
+                {% endfor %}
+                {% if not view.assets %}
+                  <div class="small text-muted-2">暂未识别到明确资产，需结合后续新闻继续确认。</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </section>
+      {% endif %}
+
+      <div class="row g-4">
+        <div class="col-lg-8">
+          <section class="glass p-4">
+            <h2 class="h4 fw-bold mb-3">来源链接</h2>
+            <div class="d-grid gap-2">
+              {% for article in articles %}
+                <a href="{{ article.url }}" class="source-item p-3 text-decoration-none text-dark" target="_blank" rel="noreferrer">
+                  <div class="fw-semibold">{{ article.title }}</div>
+                  <div class="small text-muted-2">
+                    {{ article.source }}
+                    · 发布时间：{{ format_time(article.published_at) or "未知" }}
+                    · 抓取时间：{{ format_time(article.fetched_at) or "未知" }}
+                  </div>
+                </a>
+              {% endfor %}
+            </div>
+          </section>
+        </div>
+        <div class="col-lg-4">
+          <section class="glass p-4">
+            <h2 class="h4 fw-bold mb-3">推送记录</h2>
+            {% if not pushes %}
+              <p class="text-muted-2 mb-0">暂无推送记录。</p>
+            {% endif %}
+            {% for push in pushes %}
+              <div class="border-bottom py-2">
+                <div class="fw-semibold">{{ label_push_status(push.status) }} · {{ "%.1f"|format(push.score_at_push) }}</div>
+                <div class="small text-muted-2">{{ push.pushed_at }}</div>
+                {% if push.error_message %}<div class="small text-danger">{{ push.error_message }}</div>{% endif %}
+              </div>
+            {% endfor %}
+          </section>
+        </div>
+      </div>
+    </main>
+    <script>
+      const reanalyzeBtn = document.getElementById("reanalyzeBtn");
+      const reanalyzeStatus = document.getElementById("reanalyzeStatus");
+      reanalyzeBtn?.addEventListener("click", async () => {
+        const clusterId = reanalyzeBtn.dataset.clusterId;
+        reanalyzeBtn.disabled = true;
+        reanalyzeBtn.textContent = "API 分析中...";
+        if (reanalyzeStatus) reanalyzeStatus.textContent = "";
+        try {
+          const response = await fetch(`/api/events/${clusterId}/reanalyze`, { method: "POST" });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || !data.ok) {
+            throw new Error(data.message || data.detail || `HTTP ${response.status}`);
+          }
+          if (reanalyzeStatus) reanalyzeStatus.textContent = data.message || "分析完成";
+          window.location.reload();
+        } catch (error) {
+          if (reanalyzeStatus) reanalyzeStatus.textContent = error.message || "分析失败";
+          reanalyzeBtn.disabled = false;
+          reanalyzeBtn.textContent = "用 API 重新分析";
+        }
+      });
+    </script>
+  </body>
+</html>

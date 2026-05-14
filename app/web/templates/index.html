@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Market Impact Radar</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      :root {
+        --radar-ink: #17212b;
+        --radar-muted: #65717b;
+        --radar-line: rgba(23, 33, 43, .1);
+        --radar-card: rgba(255, 255, 255, .92);
+        --radar-green: #176b5d;
+        --radar-amber: #b7791f;
+        --radar-red: #a33b2f;
+        --radar-blue: #28527a;
+      }
+      body {
+        min-height: 100vh;
+        color: var(--radar-ink);
+        background:
+          linear-gradient(120deg, rgba(23, 107, 93, .08), transparent 30rem),
+          linear-gradient(180deg, #f6f2ea 0%, #eef2f1 55%, #f7f5ef 100%);
+        font-family: "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", sans-serif;
+      }
+      .radar-shell { max-width: 1180px; }
+      .glass {
+        border: 1px solid rgba(255, 255, 255, .68);
+        background: var(--radar-card);
+        box-shadow: 0 18px 60px rgba(26, 45, 52, .10);
+        backdrop-filter: blur(18px);
+      }
+      .nav-glass {
+        background: rgba(250, 248, 242, .9);
+        border-bottom: 1px solid rgba(255, 255, 255, .78);
+        backdrop-filter: blur(16px);
+      }
+      .nav-config-btn {
+        border: 1px solid rgba(16, 32, 39, .14);
+        background: rgba(255, 255, 255, .82);
+        color: var(--radar-ink);
+        text-decoration: none;
+      }
+      .nav-config-btn:hover {
+        border-color: rgba(16, 32, 39, .26);
+        background: white;
+        color: var(--radar-ink);
+      }
+      .brand-dot {
+        width: .8rem;
+        height: .8rem;
+        border-radius: 999px;
+        background: var(--radar-green);
+        box-shadow: 0 0 0 .45rem rgba(15, 118, 110, .14);
+      }
+      .eyebrow { text-transform: none; letter-spacing: .01em; }
+      .hero-title { font-size: clamp(2.1rem, 5vw, 4.4rem); letter-spacing: -.06em; line-height: .95; }
+      .hero-subtitle { color: var(--radar-muted); max-width: 46rem; }
+      .metric-card {
+        border: 1px solid var(--radar-line);
+        border-radius: 1.3rem;
+        background: rgba(255, 255, 255, .72);
+      }
+      .metric-value { font-size: 2rem; font-weight: 800; letter-spacing: -.04em; }
+      .control-panel {
+        border-radius: 1.5rem;
+        background: #17212b;
+        color: #f6fbfa;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+      }
+      .control-panel .form-select { border: 0; }
+      .scan-status {
+        display: flex;
+        gap: .65rem;
+        align-items: flex-start;
+        min-height: 3.25rem;
+        border: 1px solid rgba(23, 33, 43, .1);
+        border-radius: 1.2rem;
+        padding: .9rem 1rem;
+        color: var(--radar-muted);
+        background: rgba(255, 255, 255, .72);
+      }
+      .scan-status::before {
+        content: "";
+        flex: 0 0 auto;
+        width: .62rem;
+        height: .62rem;
+        margin-top: .42rem;
+        border-radius: 999px;
+        background: var(--radar-green);
+        box-shadow: 0 0 0 .35rem rgba(23, 107, 93, .1);
+      }
+      .sort-toolbar {
+        border: 1px solid var(--radar-line);
+        background: rgba(255, 255, 255, .78);
+      }
+      .event-card {
+        border: 1px solid var(--radar-line);
+        border-radius: 1.4rem;
+        background: rgba(255, 255, 255, .94);
+        transition: transform .18s ease, box-shadow .18s ease;
+      }
+      .event-card:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(26, 45, 52, .12); }
+      .event-card.just-updated {
+        animation: cardUpdated 1.2s ease;
+      }
+      @keyframes cardUpdated {
+        0% { box-shadow: 0 0 0 0 rgba(23, 107, 93, .42); border-color: rgba(23, 107, 93, .55); }
+        100% { box-shadow: 0 0 0 1rem rgba(23, 107, 93, 0); border-color: var(--radar-line); }
+      }
+      .score-pill {
+        display: inline-flex;
+        min-width: 5.4rem;
+        justify-content: center;
+        border-radius: 999px;
+        padding: .42rem .8rem;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        color: white;
+        background: var(--radar-green);
+      }
+      .score-pill.high { background: var(--radar-red); }
+      .score-pill.medium { background: var(--radar-amber); }
+      .badge-soft { background: rgba(29, 78, 216, .1); color: var(--radar-blue); }
+      .source-chip {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid rgba(23, 33, 43, .1);
+        border-radius: 999px;
+        padding: .22rem .62rem;
+        background: rgba(255, 255, 255, .72);
+        color: var(--radar-muted);
+        font-size: .78rem;
+        font-weight: 650;
+      }
+      .source-chip.domestic {
+        border-color: rgba(23, 107, 93, .2);
+        background: rgba(23, 107, 93, .08);
+        color: var(--radar-green);
+      }
+      .empty-state {
+        border: 1px dashed rgba(16, 32, 39, .22);
+        border-radius: 1.5rem;
+        background: rgba(255, 255, 255, .58);
+      }
+      .copy-done { border-color: rgba(23, 107, 93, .55) !important; color: var(--radar-green) !important; }
+      .copy-toast {
+        position: fixed;
+        right: 1.25rem;
+        bottom: 1.25rem;
+        z-index: 1080;
+        border-radius: 999px;
+        padding: .72rem 1rem;
+        background: #17212b;
+        color: #f6fbfa;
+        box-shadow: 0 18px 48px rgba(16, 32, 39, .22);
+        opacity: 0;
+        transform: translateY(.75rem);
+        pointer-events: none;
+        transition: opacity .18s ease, transform .18s ease;
+      }
+      .copy-toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg nav-glass sticky-top">
+      <div class="container radar-shell">
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="/">
+          <span class="brand-dot"></span>
+          Market Impact Radar
+        </a>
+        <a class="nav-config-btn btn btn-sm rounded-pill px-4 py-2 fw-semibold" href="/settings">系统设置</a>
+      </div>
+    </nav>
+
+    <main class="container radar-shell py-4 py-lg-5">
+      <section class="glass rounded-5 p-4 p-lg-5 mb-4">
+        <div class="row g-4 align-items-end">
+          <div class="col-lg-7">
+            <div class="eyebrow small fw-bold text-success mb-3">Global Market News Radar</div>
+            <h1 class="hero-title fw-black mb-3">全球股市影响新闻雷达</h1>
+            <p class="hero-subtitle fs-5 mb-0">
+              聚合全球新闻、公告与 RSS，把重复报道合并成事件，按市场影响力或最新时间排序，并给出中文摘要和影响路径。
+            </p>
+          </div>
+          <div class="col-lg-5">
+            <div class="control-panel p-4">
+              <div class="row g-2 mb-3">
+                <div class="col-12">
+                  <label class="form-label small text-white-50">观察时间范围</label>
+                  <select id="windowSelect" name="window" class="form-select rounded-pill">
+                    {% for option in allowed_windows %}
+                      <option value="{{ option.value }}" {% if option.value == window %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <button id="runScanBtn" class="btn btn-warning rounded-pill w-100 fw-bold" type="button" data-window="{{ window }}" data-sort="{{ sort }}">
+                立即扫描并分析
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div id="scanStatus" class="scan-status small mb-4">点击“立即扫描并分析”后，扫描结果会显示在这里。</div>
+
+      <section id="metricGrid" class="row g-3 mb-4">
+        <div class="col-md-3">
+          <div class="metric-card p-3 h-100">
+            <div class="small text-secondary">当前事件</div>
+            <div class="metric-value" data-stat="event_count">{{ stats.event_count }}</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="metric-card p-3 h-100">
+            <div class="small text-secondary">高影响事件</div>
+            <div class="metric-value" data-stat="high_impact_count">{{ stats.high_impact_count }}</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="metric-card p-3 h-100">
+            <div class="small text-secondary">最高影响分</div>
+            <div class="metric-value" data-stat="top_score">{{ "%.1f"|format(stats.top_score) }}</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="metric-card p-3 h-100">
+            <div class="small text-secondary">推送门槛</div>
+            <div class="metric-value" data-stat="push_threshold">{{ "%.0f"|format(stats.push_threshold) }}</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="sort-toolbar rounded-4 p-3 mb-4">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+          <div>
+            <div class="fw-bold">事件列表排序</div>
+            <div class="small text-secondary">提供翻译 API 后，英文新闻标题会自动转为中文，阅读更准确。</div>
+          </div>
+          <div class="d-flex flex-column flex-sm-row gap-2">
+            <select id="sortSelect" name="sort" class="form-select rounded-pill">
+              {% for option in sort_options %}
+                <option value="{{ option.value }}" {% if option.value == sort %}selected{% endif %}>{{ option.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </section>
+
+      {% if not rows %}
+        <section class="empty-state p-4 p-lg-5 text-center">
+          <h2 class="h4 mb-2">还没有事件数据</h2>
+          <p class="text-secondary mb-3">点击“立即扫描并分析”，系统会按当前时间范围抓取数据源。</p>
+          <p class="small text-secondary mb-0">如果没有配置 LLM，系统会使用规则评分回退；如果没有配置企业微信，推送会被记录但不会发送。</p>
+        </section>
+      {% endif %}
+
+      <section id="eventList" class="d-grid gap-3" data-window="{{ window }}">
+        {% include "_event_cards.html" %}
+      </section>
+    </main>
+    <div id="copyToast" class="copy-toast" role="status" aria-live="polite">已复制转发链接</div>
+
+    <script>
+      const runButton = document.getElementById("runScanBtn");
+      const scanStatus = document.getElementById("scanStatus");
+      const windowSelect = document.getElementById("windowSelect");
+      const sortSelect = document.getElementById("sortSelect");
+
+      runButton?.addEventListener("click", async () => {
+        const selectedWindow = windowSelect?.value || runButton.dataset.window || "24h";
+        const selectedSort = sortSelect?.value || runButton.dataset.sort || "impact_score";
+        runButton.disabled = true;
+        runButton.textContent = "扫描中，请稍候...";
+        scanStatus.textContent = "正在快速扫描：抓取新闻、去重、聚类和规则评分。API 分析会在后台继续执行。";
+        let scanSucceeded = false;
+
+        try {
+          const response = await fetchWithTimeout(
+            `/api/ingest/run?window=${encodeURIComponent(selectedWindow)}&defer_llm=true`,
+            { method: "POST" },
+            60000
+          );
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(result.detail || result.message || result.error || `HTTP ${response.status}`);
+          }
+          const errorText = Array.isArray(result.errors) && result.errors.length
+            ? "部分数据源暂时不可用，已保留可用结果。"
+            : "";
+          if (result.fetched_count === 0 && result.errors?.length) {
+            scanStatus.textContent = "暂时没有获取到新闻，请稍后重试或检查网络、数据源配置。";
+          } else {
+            const pushText = result.push_attempted_count
+              ? `推送成功 ${result.pushed_count} 条，跳过 ${result.push_skipped_count || 0} 条，失败 ${result.push_failed_count || 0} 条`
+              : (
+                result.push_note ||
+                (result.background_analysis_started
+                  ? "后台 API 分析完成后，将按影响分推送符合条件的事件"
+                  : "没有事件达到推送条件")
+              );
+            const mainText = `完成：抓取候选 ${result.fetched_count} 条，新增入库 ${result.inserted_count} 条，重复 ${result.duplicate_count || 0} 条，聚类 ${result.cluster_count} 个，分析 ${result.analysis_count} 个，${stripTrailingPunctuation(pushText)}。`;
+            const llmText = result.llm_status_note ? ` ${stripTrailingPunctuation(result.llm_status_note)}。` : "";
+            scanStatus.textContent = errorText ? `${mainText} ${llmText}${errorText}` : `${mainText}${llmText}`;
+          }
+          if (result.fetched_count > 0 || result.inserted_count > 0 || result.analysis_count > 0) {
+            try {
+              await refreshSortedEvents(selectedSort);
+              if (result.background_analysis_started) {
+                scheduleBackgroundRefresh(selectedSort);
+              }
+            } catch {
+              scanStatus.textContent = `${scanStatus.textContent} 列表刷新失败，请手动刷新页面。`;
+            }
+          }
+          scanSucceeded = true;
+        } catch (error) {
+          scanStatus.textContent = `扫描失败：${error.message || error}`;
+        } finally {
+          runButton.disabled = false;
+          runButton.textContent = scanSucceeded ? "再次扫描" : "立即扫描并分析";
+        }
+      });
+
+      async function refreshSortedEvents(sortValue) {
+        const list = document.getElementById("eventList");
+        if (!list) return;
+        const selectedWindow = windowSelect?.value || list.dataset.window || "24h";
+        const cacheBuster = Date.now().toString();
+        const response = await fetchWithTimeout(
+          `/events/fragment?window=${encodeURIComponent(selectedWindow)}&sort=${encodeURIComponent(sortValue)}&_=${cacheBuster}`,
+          { cache: "no-store" },
+          30000
+        );
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        list.innerHTML = await response.text();
+        const url = new URL(window.location.href);
+        url.searchParams.set("window", selectedWindow);
+        url.searchParams.set("sort", sortValue);
+        window.history.replaceState(null, "", url);
+      }
+
+      function scheduleBackgroundRefresh(sortValue) {
+        const delays = [12000, 30000, 60000];
+        delays.forEach((delay) => {
+          window.setTimeout(async () => {
+            try {
+              await refreshSortedEvents(sortValue);
+              const note = " 后台 API 分析仍在继续，列表已自动同步一次。";
+              if (scanStatus && !scanStatus.textContent.includes("列表已自动同步")) {
+                scanStatus.textContent = `${scanStatus.textContent}${note}`;
+              }
+            } catch {
+              // 后台刷新失败不打断用户阅读。
+            }
+          }, delay);
+        });
+      }
+
+      function stripTrailingPunctuation(value) {
+        return String(value || "").replace(/[。.!！]+$/g, "");
+      }
+
+      async function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
+        const controller = new AbortController();
+        const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          return await fetch(url, { ...options, signal: controller.signal });
+        } catch (error) {
+          if (error?.name === "AbortError") {
+            throw new Error("请求超时，请减少单次 API 分析数量或检查接口状态");
+          }
+          throw error;
+        } finally {
+          window.clearTimeout(timer);
+        }
+      }
+
+      sortSelect?.addEventListener("change", () => {
+        refreshSortedEvents(sortSelect.value || "impact_score");
+      });
+
+      document.addEventListener("click", async (event) => {
+        const button = event.target.closest(".js-reanalyze-event");
+        if (!button) return;
+        event.preventDefault();
+        const clusterId = button.dataset.clusterId || "";
+        if (!clusterId) return;
+        const status = document.querySelector(`.js-reanalyze-status[data-cluster-id="${clusterId}"]`);
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = "分析中...";
+        if (status) status.textContent = "正在调用 API";
+        try {
+          const selectedWindow = windowSelect?.value || document.getElementById("eventList")?.dataset.window || "24h";
+          const selectedSort = sortSelect?.value || "impact_score";
+          const response = await fetchWithTimeout(
+            `/api/events/${clusterId}/reanalyze?window=${encodeURIComponent(selectedWindow)}&sort=${encodeURIComponent(selectedSort)}`,
+            { method: "POST" },
+            120000
+          );
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || !data.ok) {
+            throw new Error(data.message || data.detail || `HTTP ${response.status}`);
+          }
+          if (status) status.textContent = "已更新";
+          if (data.hidden) {
+            removeEventCard(clusterId, "已隐藏低影响事件");
+          } else if (data.card_html) {
+            replaceEventCardHtml(clusterId, data.card_html);
+          } else {
+            await refreshEventCard(clusterId);
+          }
+          updateDashboardStats(data.stats);
+        } catch (error) {
+          button.disabled = false;
+          button.textContent = originalText;
+          if (status) status.textContent = error.message || "分析失败";
+        }
+      });
+
+      async function refreshEventCard(clusterId) {
+        const currentCard = document.querySelector(`.event-card[data-cluster-id="${clusterId}"]`);
+        if (!currentCard) return;
+        const response = await fetchWithTimeout(
+          `/events/${encodeURIComponent(clusterId)}/card?_=${Date.now()}`,
+          { cache: "no-store" },
+          30000
+        );
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        replaceEventCardHtml(clusterId, await response.text());
+      }
+
+      function replaceEventCardHtml(clusterId, html) {
+        const currentCard = document.querySelector(`.event-card[data-cluster-id="${clusterId}"]`);
+        if (!currentCard) throw new Error("卡片刷新失败");
+        const template = document.createElement("template");
+        template.innerHTML = String(html || "").trim();
+        const nextCard = template.content.querySelector(".event-card");
+        if (!nextCard) throw new Error("卡片刷新失败");
+        nextCard.classList.add("just-updated");
+        currentCard.replaceWith(nextCard);
+      }
+
+      function removeEventCard(clusterId, message) {
+        const currentCard = document.querySelector(`.event-card[data-cluster-id="${clusterId}"]`);
+        if (!currentCard) return;
+        currentCard.classList.add("just-updated");
+        setTimeout(() => currentCard.remove(), 180);
+        showCopyToast(message || "已从首页隐藏");
+      }
+
+      function updateDashboardStats(stats) {
+        if (!stats) return;
+        const values = {
+          event_count: Number(stats.event_count || 0).toFixed(0),
+          high_impact_count: Number(stats.high_impact_count || 0).toFixed(0),
+          top_score: Number(stats.top_score || 0).toFixed(1),
+          push_threshold: Number(stats.push_threshold || 0).toFixed(0),
+        };
+        for (const [key, value] of Object.entries(values)) {
+          const node = document.querySelector(`[data-stat="${key}"]`);
+          if (node) node.textContent = value;
+        }
+      }
+
+      async function copySourceLink(url) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(url);
+          return true;
+        }
+        const textarea = document.createElement("textarea");
+        textarea.value = url;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.left = "-9999px";
+        textarea.style.top = "0";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        textarea.setSelectionRange(0, textarea.value.length);
+        const ok = document.execCommand("copy");
+        document.body.removeChild(textarea);
+        return ok;
+      }
+
+      document.addEventListener("click", async (event) => {
+        const button = event.target.closest(".js-copy-source");
+        if (!button) return;
+        event.preventDefault();
+        const url = button.dataset.url || "";
+        if (!url) return;
+        try {
+          const copied = await copySourceLink(url);
+          if (!copied) throw new Error("copy failed");
+          button.classList.add("copy-done");
+          button.textContent = "已复制转发链接";
+          showCopyToast("已复制转发链接");
+          setTimeout(() => {
+            button.classList.remove("copy-done");
+            button.textContent = "转发来源链接";
+          }, 1600);
+        } catch {
+          showCopyToast("请手动复制来源链接");
+          window.prompt("复制来源链接", url);
+        }
+      });
+
+      function showCopyToast(message) {
+        const toast = document.getElementById("copyToast");
+        if (!toast) return;
+        toast.textContent = message;
+        toast.classList.add("show");
+        window.clearTimeout(showCopyToast.timer);
+        showCopyToast.timer = window.setTimeout(() => {
+          toast.classList.remove("show");
+        }, 1600);
+      }
+    </script>
+  </body>
+</html>

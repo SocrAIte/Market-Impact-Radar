@@ -1,0 +1,212 @@
+runtime:
+  default_time_window: "24h"
+  allowed_time_windows: ["6h", "24h", "3d", "7d"]
+  request_timeout_seconds: 20
+  source_fetch_timeout_seconds: 6
+  max_clusters_per_run: 40
+  max_llm_analysis_per_run: 20
+  max_concurrent_llm_analysis: 10
+  backfill_unanalyzed_clusters: false
+  user_agent: "market-impact-radar/0.1 (+https://github.com/your-org/market-impact-radar)"
+
+scheduler:
+  enabled: true
+  interval_minutes: 30
+
+scoring:
+  push_score_threshold: 70
+  duplicate_push_window_hours: 12
+  score_delta_for_repush: 15
+  weights:
+    event_severity_score: 0.24
+    market_scope_score: 0.18
+    asset_sensitivity_score: 0.18
+    credibility_score: 0.16
+    novelty_score: 0.14
+    timeliness_score: 0.10
+
+sources:
+  gdelt:
+    enabled: true
+    max_results: 80
+    keywords:
+      - A shares
+      - China stock market
+      - CSI 300
+      - Shanghai Composite
+      - Shenzhen Component
+      - ChiNext
+      - PBOC
+      - CSRC
+      - yuan
+      - property sector China
+      - China semiconductor
+      - China new energy
+      - stock market
+      - central bank
+      - inflation
+      - war
+      - sanctions
+      - energy supply
+      - supply chain
+      - semiconductor
+
+  newsapi:
+    enabled: false
+    max_results: 50
+    keywords:
+      - China stock market
+      - A shares
+      - CSI 300
+      - Shanghai Composite
+      - PBOC
+      - CSRC
+      - yuan
+      - earnings
+      - Federal Reserve
+      - China economy
+    extra:
+      language: en
+
+  alphavantage:
+    enabled: false
+    max_results: 100
+    tickers: ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "TSLA"]
+    extra:
+      topics: ["financial_markets", "economy_macro", "technology"]
+
+  china_sites:
+    enabled: true
+    max_results: 100
+    keywords:
+      - A股
+      - 沪深
+      - 上证
+      - 深证
+      - 创业板
+      - 北交所
+      - 证监会
+      - 央行
+      - 人民币
+      - 房地产
+      - 新能源
+      - 半导体
+      - 业绩
+      - 并购
+      - 监管
+    extra:
+      sites:
+        - name: 证券时报
+          url: https://www.stcn.com/
+          enabled: true
+        - name: 中国证券报
+          url: https://www.cs.com.cn/
+          enabled: true
+        - name: 上海证券报
+          url: https://www.cnstock.com/
+          enabled: true
+        - name: 证券日报
+          url: http://www.zqrb.cn/
+          enabled: true
+        - name: 财联社
+          url: https://www.cls.cn/
+          enabled: true
+        - name: 第一财经
+          url: https://www.yicai.com/
+          enabled: true
+        - name: 东方财富
+          url: https://finance.eastmoney.com/
+          enabled: true
+        - name: 新浪财经
+          url: https://finance.sina.com.cn/
+          enabled: true
+        - name: 中国证监会
+          url: https://www.csrc.gov.cn/
+          enabled: true
+        - name: 中国人民银行
+          url: http://www.pbc.gov.cn/
+          enabled: true
+        - name: 上海证券交易所
+          url: https://www.sse.com.cn/
+          enabled: true
+        - name: 深圳证券交易所
+          url: https://www.szse.cn/
+          enabled: true
+        - name: 北京证券交易所
+          url: https://www.bse.cn/
+          enabled: true
+        - name: 巨潮资讯
+          url: https://www.cninfo.com.cn/
+          enabled: true
+        - name: 中证指数
+          url: https://www.csindex.com.cn/
+          enabled: true
+        - name: 中国基金报
+          url: https://www.chnfund.com/
+          enabled: true
+        - name: 每日经济新闻
+          url: https://www.nbd.com.cn/
+          enabled: true
+        - name: 21财经
+          url: https://www.21jingji.com/
+          enabled: true
+        - name: 同花顺财经
+          url: https://finance.10jqka.com.cn/
+          enabled: true
+        - name: 新华财经
+          url: https://www.cnfin.com/
+          enabled: true
+
+  sec_edgar:
+    enabled: true
+    max_results: 60
+    forms: ["8-K", "10-Q", "10-K", "6-K", "20-F"]
+
+  rss:
+    enabled: true
+    max_results: 120
+    feeds:
+      - name: 华尔街见闻
+        url: https://wallstreetcn.com/rss
+        source_type: china_finance
+        language: zh
+      - name: 新浪财经要闻
+        url: https://rss.sina.com.cn/finance/ywgg.xml
+        source_type: china_finance
+        language: zh
+      - name: 新浪财经国内财经
+        url: https://rss.sina.com.cn/finance/china/focus15.xml
+        source_type: china_finance
+        language: zh
+      - name: 新浪财经股市及时雨
+        url: https://rss.sina.com.cn/finance/stock/jsy.xml
+        source_type: china_finance
+        language: zh
+      - name: Reuters Business
+        url: https://www.reutersagency.com/feed/?best-topics=business-finance&post_type=best
+        source_type: rss
+        language: en
+      - name: AP Business
+        url: https://apnews.com/hub/business?output=rss
+        source_type: rss
+        language: en
+      - name: BBC Business
+        url: https://feeds.bbci.co.uk/news/business/rss.xml
+        source_type: rss
+        language: en
+      - name: CNBC Top News
+        url: https://www.cnbc.com/id/100003114/device/rss/rss.html
+        source_type: rss
+        language: en
+      - name: Federal Reserve Press Releases
+        url: https://www.federalreserve.gov/feeds/press_all.xml
+        source_type: central_bank
+        language: en
+      - name: ECB Press Releases
+        url: https://www.ecb.europa.eu/rss/press.html
+        source_type: central_bank
+        language: en
+      - name: HKEX News
+        url: https://www.hkex.com.hk/News/News-Release/RSS-Feeds?sc_lang=en
+        source_type: exchange
+        language: en
