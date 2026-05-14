@@ -19,8 +19,8 @@
 ## 核心功能
 
 - **全球新闻抓取**：支持 GDELT、SEC EDGAR、RSS、NewsAPI、Alpha Vantage 等来源。
-- **多源去重**：基于 `canonical_url`、`title_hash`、`content_hash` 去重。
-- **事件聚类**：将同一事件的多篇新闻聚合为 `EventCluster`。
+- **基础去重**：在 Article 层基于 `canonical_url`、`title_hash`、`content_hash` 去掉完全重复或同源重复文章。
+- **事件聚类**：在 Event 层结合标题、摘要、实体、时间窗口和相似度，将多篇新闻聚合为 `EventCluster`，用于减少重复展示和重复推送。
 - **市场影响评分**：按 `market_impact_score` 降序排序，而不是按发布时间排序。
 - **中文摘要**：生成一句话中文事实摘要和中文影响路径解释。
 - **影响资产识别**：识别股票、指数、行业、大宗商品、外汇、债券和国家/地区。
@@ -31,8 +31,8 @@
 ## Features
 
 - **Global news ingestion** from GDELT, SEC EDGAR, RSS, NewsAPI, Alpha Vantage, and custom sources.
-- **Multi-source deduplication** using canonical URLs and content/title fingerprints.
-- **Event clustering** to merge duplicate reports into one explainable event.
+- **Article-level deduplication** using canonical URLs and content/title fingerprints for exact or same-source duplicates.
+- **Event-level clustering** using titles, summaries, entities, time windows, and similarity signals to reduce repeated displays and alerts.
 - **Market impact scoring** sorted by `market_impact_score`, not publish time.
 - **Chinese summaries** and market transmission-path explanations.
 - **Affected asset detection** for stocks, indices, sectors, commodities, FX, bonds, and countries.
@@ -48,8 +48,8 @@
 flowchart LR
   A["Global Sources<br/>GDELT / RSS / SEC EDGAR / NewsAPI / Alpha Vantage"] --> B["Ingest"]
   B --> C["Normalize<br/>Article Schema"]
-  C --> D["Dedup<br/>URL / Title Hash / Content Hash"]
-  D --> E["Cluster<br/>EventCluster"]
+  C --> D["Article Dedup<br/>URL / Title Hash / Content Hash"]
+  D --> E["Event Cluster<br/>Title / Entity / Time / Similarity"]
   E --> F["Entity Extract<br/>Company / Ticker / Country / Sector / Asset"]
   F --> G["Rule Scoring"]
   G --> H["LLM Analysis<br/>Strict JSON Schema"]
