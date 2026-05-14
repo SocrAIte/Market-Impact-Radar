@@ -29,21 +29,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [
-  "pytest>=8.2.0",
-  "pytest-asyncio>=0.23.7",
-  "respx>=0.21.1",
-  "ruff>=0.5.0",
-]
 postgres = ["psycopg[binary]>=3.2.0"]
 
 [tool.setuptools.packages.find]
 include = ["app*"]
-
-[tool.pytest.ini_options]
-pythonpath = ["."]
-testpaths = ["tests"]
-asyncio_mode = "auto"
 
 [tool.ruff]
 line-length = 120

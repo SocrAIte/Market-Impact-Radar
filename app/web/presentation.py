@@ -242,7 +242,7 @@ def title_to_chinese_headline(title: str, event_type: str = "市场新闻") -> s
     return ""
 
 
-# Backward-compatible alias used by older tests/imports.
+# Backward-compatible alias for earlier public imports.
 title_to_chinese_sentence = title_to_chinese_headline
 
 

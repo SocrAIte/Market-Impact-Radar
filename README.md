@@ -94,7 +94,7 @@ curl -X POST "http://localhost:8000/api/ingest/run?window=24h"
 ```powershell
 conda create -n market_impact_radar python=3.12 -y -c https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main -c https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/r
 conda activate market_impact_radar
-python -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -e ".[dev]"
+python -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -e .
 Copy-Item .env.example .env
 Copy-Item config.example.yaml config.yaml
 uvicorn app.main:app --reload
@@ -233,16 +233,15 @@ https://example.com/news
 - 回测样本、评分校准方法和评估报告。
 - Dashboard、API、安全配置和部署文档。
 
-开发流程：
+最小可复现运行：
 
 ```bash
-pip install -e ".[dev]"
-pytest
+pip install -e .
+uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 提交 PR 前请确保：
 
-- 测试通过。
 - 不提交 `.env`、API key、Webhook 或数据库文件。
 - 新增 LLM 输出必须通过 schema 校验。
 - 不引入荐股、目标价、收益承诺等输出。
