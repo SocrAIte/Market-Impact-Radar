@@ -8,6 +8,16 @@
 
 ---
 
+## 当前版本
+
+**v0.1 minimal reproducible release**
+
+这是 market-impact-radar 的最小可复现开源版本，保留核心运行链路：新闻抓取、基础去重、事件聚类、规则评分、LLM 中文分析、Dashboard 展示和企业微信推送。
+
+当前版本以 SQLite、FastAPI、Jinja2 Dashboard 和企业微信机器人为主，适合本地运行、二次开发和验证产品方向。测试脚本、扩展文档和历史运行数据未包含在最小发布目录中。
+
+---
+
 ## English Summary
 
 **market-impact-radar** ranks global market news by predicted stock-market impact and sends high-impact events to Enterprise WeChat.
