@@ -74,16 +74,13 @@ flowchart LR
 
 ## 快速开始
 
+### Docker Compose
+
 ```bash
-git clone https://github.com/your-org/market-impact-radar.git
-cd market-impact-radar
+git clone https://github.com/SocrAIte/Market-Impact-Radar.git
+cd Market-Impact-Radar
 cp .env.example .env
 cp config.example.yaml config.yaml
-```
-
-编辑 `.env`，填写 LLM 和企业微信配置；编辑 `config.yaml`，调整数据源、关键词、RSS 和推送阈值。
-
-```bash
 docker compose up --build
 ```
 
@@ -93,21 +90,29 @@ docker compose up --build
 http://localhost:8000
 ```
 
-手动触发一次抓取：
+### 本地 Python
 
 ```bash
-curl -X POST "http://localhost:8000/api/ingest/run?window=24h"
+pip install -e .
+cp .env.example .env
+cp config.example.yaml config.yaml
+uvicorn app.main:app --reload
 ```
 
-### Conda + 清华源
+### 可选配置
 
-```powershell
-conda create -n market_impact_radar python=3.12 -y -c https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main -c https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/r
-conda activate market_impact_radar
-python -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -e .
-Copy-Item .env.example .env
-Copy-Item config.example.yaml config.yaml
-uvicorn app.main:app --reload
+如需 LLM 中文分析，填写 .env：
+
+```env
+LLM_BASE_URL=
+LLM_API_KEY=
+LLM_MODEL=
+```
+
+如需企业微信推送，填写：
+
+```env
+WECOM_WEBHOOK_URL=
 ```
 
 ---
