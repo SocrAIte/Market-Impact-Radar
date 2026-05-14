@@ -17,10 +17,7 @@ from app.utils.hashing import stable_hash
 from app.utils.time import ensure_aware, utcnow
 
 
-DISCLAIMER = (
-    "本消息由 AI 自动整理，仅用于新闻监测和研究辅助，不构成任何投资建议、买卖建议或收益承诺。"
-    "市场有风险，请独立判断。"
-)
+DISCLAIMER = "AI 自动整理，仅供新闻监测和研究辅助，不构成投资建议。"
 
 WECOM_MARKDOWN_BYTE_LIMIT = 4096
 _PUSH_BATCH_LOCK = asyncio.Lock()
@@ -63,6 +60,13 @@ OFFICIAL_SOURCE_TYPES = {
     "official",
 }
 
+DOMESTIC_SOURCE_TYPES = {
+    "china_site",
+    "china_finance",
+    "china_regulator",
+    "china_exchange",
+}
+
 
 @dataclass(slots=True)
 class WeComPushResult:
@@ -95,6 +99,7 @@ class WeComNotifier:
         self.threshold = threshold if threshold is not None else scoring_config.push_score_threshold
         self.duplicate_window = timedelta(hours=scoring_config.duplicate_push_window_hours)
         self.score_delta_for_repush = scoring_config.score_delta_for_repush
+        self.source_scope = scoring_config.push_source_scope
         self.max_events_per_run = max_events_per_run
 
     @property
@@ -171,15 +176,19 @@ class WeComNotifier:
         async with _PUSH_BATCH_LOCK:
             effective_limit = min(limit or self.max_events_per_run, self.max_events_per_run, 10)
             result = WeComPushResult(errors=[])
-            for cluster, analysis in _latest_high_impact_rows(db, self.threshold, effective_limit):
+            candidate_limit = max(effective_limit * 10, 100)
+            for cluster, analysis in _latest_high_impact_rows(db, self.threshold, candidate_limit):
                 db.expire_all()
                 fresh_cluster = db.get(EventCluster, cluster.id)
                 fresh_analysis = db.get(MarketImpactAnalysis, analysis.id)
                 if fresh_cluster is None or fresh_analysis is None:
                     continue
                 articles = _cluster_articles(db, fresh_cluster.id)
+                scoped_articles = _filter_articles_by_scope(articles, self.source_scope)
+                if not scoped_articles:
+                    continue
                 result.attempted += 1
-                record = await self.push_event(db, fresh_cluster, fresh_analysis, articles)
+                record = await self.push_event(db, fresh_cluster, fresh_analysis, scoped_articles)
                 if record is None:
                     continue
                 if record.status == "success":
@@ -191,6 +200,8 @@ class WeComNotifier:
                     if record.error_message:
                         result.add_error(record.error_message)
                 db.commit()
+                if result.attempted >= effective_limit:
+                    break
             return result
 
     def can_push(
@@ -233,27 +244,25 @@ def format_wecom_message(
     top_url = source_links[0][1] if source_links else ""
     score = _analysis_score(analysis)
     score_color = "warning" if score >= 85 else "info"
-    assets = _asset_reason_lines(analysis)
-    uncertainties = _analysis_list(analysis, "uncertainties", "uncertainties_json")[:3]
-    uncertainty_text = "；".join(str(item) for item in uncertainties) or "暂无显著不确定性。"
-    source_name = cluster.main_source or _main_source_from_links(source_links) or "未知来源"
+    source_name = _main_source_from_links(source_links) or cluster.main_source or "未知来源"
     original_link = f"[查看原文]({top_url})" if top_url else "暂无原文链接"
     published_at, fetched_at = _message_article_times(cluster, articles)
+    summary = _analysis_attr(analysis, "one_sentence_summary_zh", cluster.summary or cluster.title)
+    explanation = _analysis_attr(analysis, "impact_explanation_zh", "影响路径仍需进一步核实。")
 
     message = (
         "# 全球市场新闻雷达\n\n"
-        f"> 影响分数：<font color=\"{score_color}\">{score:.0f}/100</font>\n"
-        f"> 影响方向：<font color=\"comment\">{_analysis_attr(analysis, 'impact_direction', 'uncertain')}</font>\n"
-        f"> 影响周期：<font color=\"comment\">{_analysis_attr(analysis, 'impact_horizon', 'short_term')}</font>\n"
-        f"> 事件类型：<font color=\"comment\">{_analysis_attr(analysis, 'event_type', cluster.event_type or '其他')}</font>\n"
-        f"> 来源：<font color=\"comment\">{source_name}，共 {cluster.source_count} 个来源</font>\n\n"
-        f"**标题**\n{_trim_text(cluster.title, 180)}\n\n"
-        f"**一句话摘要**\n{_trim_text(_analysis_attr(analysis, 'one_sentence_summary_zh', cluster.summary or cluster.title), 320)}\n\n"
-        f"**可能影响**\n{assets}\n\n"
-        f"**影响路径**\n{_trim_text(_analysis_attr(analysis, 'impact_explanation_zh', '影响路径仍需进一步核实。'), 760)}\n\n"
-        f"**主要不确定性**\n{_trim_text(uncertainty_text, 360)}\n\n"
-        f"**时间**\n发布时间：{published_at}\n抓取时间：{fetched_at}\n\n"
-        f"{original_link}\n\n"
+        f"> 分数：<font color=\"{score_color}\">{score:.0f}/100</font>｜"
+        f"{_direction_label(_analysis_attr(analysis, 'impact_direction', 'uncertain'))}｜"
+        f"{_horizon_label(_analysis_attr(analysis, 'impact_horizon', 'short_term'))}\n"
+        f"> 类型：<font color=\"comment\">{_analysis_attr(analysis, 'event_type', cluster.event_type or '其他')}</font>｜"
+        f"来源：<font color=\"comment\">{source_name}</font>\n"
+        f"> 发布时间：<font color=\"comment\">{published_at}</font>｜"
+        f"抓取时间：<font color=\"comment\">{fetched_at}</font>\n\n"
+        f"**{_trim_text(cluster.title, 96)}**\n\n"
+        f"{_trim_text(summary, 180)}\n\n"
+        f"> {_trim_text(explanation, 240)}\n\n"
+        f"{original_link}\n"
         f"> 免责声明：{DISCLAIMER}"
     )
     return _fit_wecom_markdown(message)
@@ -331,6 +340,23 @@ def _cluster_articles(db: Session, cluster_id: int) -> list[Article]:
     )
 
 
+def _filter_articles_by_scope(articles: Sequence[Article], scope: str) -> list[Article]:
+    if scope == "domestic":
+        return [article for article in articles if _is_domestic_article(article)]
+    if scope == "foreign":
+        return [article for article in articles if not _is_domestic_article(article)]
+    return list(articles)
+
+
+def _is_domestic_article(article: Article) -> bool:
+    if article.source_type in DOMESTIC_SOURCE_TYPES:
+        return True
+    if (article.language or "").lower().startswith("zh"):
+        return True
+    url = (article.url or "").casefold()
+    return any(token in url for token in (".cn/", ".com.cn/", "cnstock", "stcn", "cls.cn", "eastmoney", "sina.com.cn"))
+
+
 def _latest_successful_push(db: Session, cluster_id: int) -> PushRecord | None:
     return db.execute(
         select(PushRecord)
@@ -397,6 +423,24 @@ def _trim_text(value: Any, max_chars: int) -> str:
     if len(text) <= max_chars:
         return text
     return text[: max_chars - 1].rstrip() + "…"
+
+
+def _direction_label(value: Any) -> str:
+    return {
+        "positive": "正面",
+        "negative": "负面",
+        "mixed": "多空交织",
+        "uncertain": "不确定",
+    }.get(str(value or "").lower(), str(value or "不确定"))
+
+
+def _horizon_label(value: Any) -> str:
+    return {
+        "intraday": "日内",
+        "short_term": "短期",
+        "medium_term": "中期",
+        "long_term": "长期",
+    }.get(str(value or "").lower(), str(value or "短期"))
 
 
 def _analysis_score(analysis: MarketImpactAnalysis | MarketImpactLLMOutput) -> float:

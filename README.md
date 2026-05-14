@@ -141,6 +141,17 @@ scoring:
   push_score_threshold: 70
   duplicate_push_window_hours: 12
   score_delta_for_repush: 15
+  push_source_scope: all # all / domestic / foreign
+
+scheduler:
+  enabled: true
+  mode: interval # interval / noon / pre_open
+  interval_minutes: 30
+  timezone: Asia/Shanghai
+  noon_hour: 12
+  noon_minute: 0
+  pre_open_hour: 9
+  pre_open_minute: 0
 ```
 
 ---
@@ -175,43 +186,20 @@ market_impact_score =
 ## 企业微信推送示例
 
 ```text
-【全球市场新闻雷达】高影响事件
+# 全球市场新闻雷达
 
-影响等级：HIGH
-影响分数：82/100
-影响方向：mixed
-影响周期：short_term
-事件类型：半导体 / 出口管制
+> 分数：82/100｜多空交织｜短期
+> 类型：半导体｜来源：Reuters
+> 发布时间：2026-05-13 09:30:00｜抓取时间：2026-05-13 09:31:08
 
-标题：
-US expands semiconductor export controls
+**美国扩大半导体出口管制**
 
-来源：
-Reuters，共 3 个来源
-
-时间：
-首次出现：2026-05-13 09:30:00+00:00
-最新进展：2026-05-13 10:15:00+00:00
-
-可能影响：
-- 半导体：出口限制可能影响供应链、订单节奏和风险偏好。
-- Nasdaq：科技权重板块预期变化可能传导至指数。
-- 美元：政策不确定性可能影响避险需求。
-
-一句话摘要：
 美国扩大半导体出口管制，相关供应链可能重新定价。
 
-影响路径：
-该事件可能通过供应链预期、科技板块估值和风险偏好影响相关股票与指数。
+> 该事件可能通过供应链预期、科技板块估值和风险偏好影响相关股票与指数。
 
-主要不确定性：
-执行细则和企业实际受影响程度仍需核实。
-
-原文：
-https://example.com/news
-
-免责声明：
-本消息由 AI 自动整理，仅用于新闻监测和研究辅助，不构成任何投资建议、买卖建议或收益承诺。市场有风险，请独立判断。
+[查看原文](https://example.com/news)
+> 免责声明：AI 自动整理，仅供新闻监测和研究辅助，不构成投资建议。
 ```
 
 ---

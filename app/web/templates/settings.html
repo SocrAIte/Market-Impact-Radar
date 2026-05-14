@@ -344,6 +344,55 @@
             </div>
           </div>
 
+          <div class="row g-3 mb-4">
+            <div class="col-lg-4">
+              <div class="config-card p-3 h-100">
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" role="switch" name="scheduler_enabled" {% if settings_view.scoring.scheduler_enabled %}checked{% endif %}>
+                  <label class="form-check-label fw-semibold">自动推送</label>
+                </div>
+                <label class="form-label small fw-semibold">推送频率</label>
+                <select class="form-select" name="scheduler_mode">
+                  {% for option in settings_view.scoring.scheduler_mode_options %}
+                    <option value="{{ option.value }}" {% if option.value == settings_view.scoring.scheduler_mode %}selected{% endif %}>{{ option.label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="config-card p-3 h-100">
+                <label class="form-label small fw-semibold">时间设置</label>
+                <div class="row g-2">
+                  <div class="col-4">
+                    <div class="small text-secondary mb-1">间隔</div>
+                    <input class="form-control" name="interval_minutes" type="number" min="5" max="1440" value="{{ settings_view.scoring.interval_minutes }}" title="间隔分钟">
+                  </div>
+                  <div class="col-4">
+                    <div class="small text-secondary mb-1">中午</div>
+                    <input class="form-control" name="noon_time" type="time" value="{{ settings_view.scoring.noon_time }}" title="中午推送时间">
+                  </div>
+                  <div class="col-4">
+                    <div class="small text-secondary mb-1">开盘前</div>
+                    <input class="form-control" name="pre_open_time" type="time" value="{{ settings_view.scoring.pre_open_time }}" title="开盘前推送时间">
+                  </div>
+                </div>
+                <input type="hidden" name="scheduler_timezone" value="{{ settings_view.scoring.scheduler_timezone }}">
+                <div class="small text-secondary mt-2">依次用于：间隔分钟、中午一次、开盘前半小时。</div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="config-card p-3 h-100">
+                <label class="form-label small fw-semibold">推送来源范围</label>
+                <select class="form-select" name="push_source_scope">
+                  {% for option in settings_view.scoring.push_source_scope_options %}
+                    <option value="{{ option.value }}" {% if option.value == settings_view.scoring.push_source_scope %}selected{% endif %}>{{ option.label }}</option>
+                  {% endfor %}
+                </select>
+                <div class="small text-secondary mt-2">仅影响企业微信推送，事件列表仍保留完整数据。</div>
+              </div>
+            </div>
+          </div>
+
           <div class="row g-3">
             {% for weight in settings_view.scoring.weights %}
               <div class="col-md-6">
@@ -550,6 +599,9 @@
           form.querySelector("[name='push_score_threshold']").value = scoring.push_score_threshold ?? 70;
           form.querySelector("[name='duplicate_push_window_hours']").value = scoring.duplicate_push_window_hours ?? 12;
           form.querySelector("[name='score_delta_for_repush']").value = scoring.score_delta_for_repush ?? 15;
+          if (form.querySelector("[name='push_source_scope']")) {
+            form.querySelector("[name='push_source_scope']").value = scoring.push_source_scope || "all";
+          }
           Object.entries(scoring.weights || {}).forEach(([key, value]) => {
             const slider = form.querySelector(`[name='weight_${key}']`);
             if (!slider) return;

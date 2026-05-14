@@ -11,6 +11,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 TimeWindow = Literal["6h", "24h", "3d", "7d"]
+SchedulerMode = Literal["interval", "noon", "pre_open"]
+PushSourceScope = Literal["all", "domestic", "foreign"]
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -46,13 +48,20 @@ class RuntimeConfig(BaseModel):
 
 class SchedulerConfig(BaseModel):
     enabled: bool = True
+    mode: SchedulerMode = "interval"
     interval_minutes: int = 30
+    timezone: str = "Asia/Shanghai"
+    noon_hour: int = 12
+    noon_minute: int = 0
+    pre_open_hour: int = 9
+    pre_open_minute: int = 0
 
 
 class ScoringConfig(BaseModel):
     push_score_threshold: float = 70.0
     duplicate_push_window_hours: int = 12
     score_delta_for_repush: float = 15.0
+    push_source_scope: PushSourceScope = "all"
     weights: dict[str, float] = Field(
         default_factory=lambda: {
             "event_severity_score": 0.24,

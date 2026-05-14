@@ -11,12 +11,19 @@ runtime:
 
 scheduler:
   enabled: true
+  mode: interval # interval / noon / pre_open
   interval_minutes: 30
+  timezone: Asia/Shanghai
+  noon_hour: 12
+  noon_minute: 0
+  pre_open_hour: 9
+  pre_open_minute: 0
 
 scoring:
   push_score_threshold: 70
   duplicate_push_window_hours: 12
   score_delta_for_repush: 15
+  push_source_scope: all # all / domestic / foreign
   weights:
     event_severity_score: 0.24
     market_scope_score: 0.18

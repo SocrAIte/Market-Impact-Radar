@@ -225,6 +225,8 @@ async def api_update_scoring(request: Request):
     config_data = _load_config_document()
     scoring = config_data.setdefault("scoring", {})
     scoring["push_score_threshold"] = _form_float(form, "push_score_threshold", 70.0, minimum=0, maximum=100)
+    source_scope = _form_text(form, "push_source_scope") or scoring.get("push_source_scope") or "all"
+    scoring["push_source_scope"] = source_scope if source_scope in {"all", "domestic", "foreign"} else "all"
     scoring["duplicate_push_window_hours"] = _form_int(
         form,
         "duplicate_push_window_hours",
@@ -235,9 +237,32 @@ async def api_update_scoring(request: Request):
     weights = scoring.setdefault("weights", {})
     for key in SCORING_WEIGHT_LABELS:
         weights[key] = _form_float(form, f"weight_{key}", ScoringConfig().weights[key], minimum=0, maximum=1)
+    scheduler = config_data.setdefault("scheduler", {})
+    scheduler["enabled"] = _form_bool(form, "scheduler_enabled")
+    scheduler_mode = _form_text(form, "scheduler_mode") or scheduler.get("mode") or "interval"
+    scheduler["mode"] = scheduler_mode if scheduler_mode in {"interval", "noon", "pre_open"} else "interval"
+    scheduler["interval_minutes"] = _form_int(
+        form,
+        "interval_minutes",
+        default=int(scheduler.get("interval_minutes") or 30),
+        minimum=5,
+        maximum=1440,
+    )
+    scheduler["timezone"] = _form_text(form, "scheduler_timezone") or scheduler.get("timezone") or "Asia/Shanghai"
+    noon_hour, noon_minute = _form_time_parts(form, "noon_time", scheduler.get("noon_hour", 12), scheduler.get("noon_minute", 0))
+    pre_open_hour, pre_open_minute = _form_time_parts(
+        form,
+        "pre_open_time",
+        scheduler.get("pre_open_hour", 9),
+        scheduler.get("pre_open_minute", 0),
+    )
+    scheduler["noon_hour"] = noon_hour
+    scheduler["noon_minute"] = noon_minute
+    scheduler["pre_open_hour"] = pre_open_hour
+    scheduler["pre_open_minute"] = pre_open_minute
     _write_config_document(config_data)
     _clear_config_caches()
-    return {"ok": True, "message": "评分与推送配置已保存。"}
+    return {"ok": True, "message": "评分与推送配置已保存，重启服务后自动推送时间生效。"}
 
 
 @router.post("/api/config/scoring/defaults")
@@ -248,6 +273,7 @@ async def api_reset_scoring_defaults():
     scoring["push_score_threshold"] = default.push_score_threshold
     scoring["duplicate_push_window_hours"] = default.duplicate_push_window_hours
     scoring["score_delta_for_repush"] = default.score_delta_for_repush
+    scoring["push_source_scope"] = default.push_source_scope
     scoring["weights"] = dict(default.weights)
     _write_config_document(config_data)
     _clear_config_caches()
@@ -878,6 +904,23 @@ def _settings_view(app_config: AppYamlConfig, db: Session | None = None) -> dict
             "push_score_threshold": app_config.scoring.push_score_threshold,
             "duplicate_push_window_hours": app_config.scoring.duplicate_push_window_hours,
             "score_delta_for_repush": app_config.scoring.score_delta_for_repush,
+            "push_source_scope": app_config.scoring.push_source_scope,
+            "push_source_scope_options": [
+                {"value": "all", "label": "国内和国外都推送"},
+                {"value": "domestic", "label": "只推送国内来源"},
+                {"value": "foreign", "label": "只推送国外来源"},
+            ],
+            "scheduler_enabled": app_config.scheduler.enabled,
+            "scheduler_mode": app_config.scheduler.mode,
+            "scheduler_mode_options": [
+                {"value": "interval", "label": "每半小时"},
+                {"value": "noon", "label": "中午一次"},
+                {"value": "pre_open", "label": "开盘前半小时"},
+            ],
+            "interval_minutes": app_config.scheduler.interval_minutes,
+            "scheduler_timezone": app_config.scheduler.timezone,
+            "noon_time": _time_input_value(app_config.scheduler.noon_hour, app_config.scheduler.noon_minute),
+            "pre_open_time": _time_input_value(app_config.scheduler.pre_open_hour, app_config.scheduler.pre_open_minute),
             "weights": [
                 {
                     "key": key,
@@ -1067,6 +1110,31 @@ def _form_float(form: Any, key: str, default: float, minimum: float, maximum: fl
     except (TypeError, ValueError):
         value = default
     return min(max(value, minimum), maximum)
+
+
+def _form_time_parts(form: Any, key: str, default_hour: Any, default_minute: Any) -> tuple[int, int]:
+    value = _form_text(form, key)
+    try:
+        fallback_hour = min(max(int(default_hour), 0), 23)
+        fallback_minute = min(max(int(default_minute), 0), 59)
+    except (TypeError, ValueError):
+        fallback_hour, fallback_minute = 0, 0
+    if not value or ":" not in value:
+        return fallback_hour, fallback_minute
+    hour_text, minute_text = value.split(":", 1)
+    try:
+        hour = min(max(int(hour_text), 0), 23)
+        minute = min(max(int(minute_text), 0), 59)
+    except ValueError:
+        return fallback_hour, fallback_minute
+    return hour, minute
+
+
+def _time_input_value(hour: Any, minute: Any) -> str:
+    try:
+        return f"{min(max(int(hour), 0), 23):02d}:{min(max(int(minute), 0), 59):02d}"
+    except (TypeError, ValueError):
+        return "00:00"
 
 
 def _split_lines(value: str) -> list[str]:
