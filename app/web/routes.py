@@ -240,7 +240,7 @@ async def api_update_scoring(request: Request):
     scheduler = config_data.setdefault("scheduler", {})
     scheduler["enabled"] = _form_bool(form, "scheduler_enabled")
     scheduler_mode = _form_text(form, "scheduler_mode") or scheduler.get("mode") or "interval"
-    scheduler["mode"] = scheduler_mode if scheduler_mode in {"interval", "noon", "pre_open"} else "interval"
+    scheduler["mode"] = scheduler_mode if scheduler_mode in {"interval", "custom_time", "market_daily", "noon", "pre_open"} else "interval"
     scheduler["interval_minutes"] = _form_int(
         form,
         "interval_minutes",
@@ -249,6 +249,12 @@ async def api_update_scoring(request: Request):
         maximum=1440,
     )
     scheduler["timezone"] = _form_text(form, "scheduler_timezone") or scheduler.get("timezone") or "Asia/Shanghai"
+    custom_hour, custom_minute = _form_time_parts(
+        form,
+        "custom_time",
+        scheduler.get("custom_hour", 18),
+        scheduler.get("custom_minute", 0),
+    )
     noon_hour, noon_minute = _form_time_parts(form, "noon_time", scheduler.get("noon_hour", 12), scheduler.get("noon_minute", 0))
     pre_open_hour, pre_open_minute = _form_time_parts(
         form,
@@ -258,6 +264,8 @@ async def api_update_scoring(request: Request):
     )
     scheduler["noon_hour"] = noon_hour
     scheduler["noon_minute"] = noon_minute
+    scheduler["custom_hour"] = custom_hour
+    scheduler["custom_minute"] = custom_minute
     scheduler["pre_open_hour"] = pre_open_hour
     scheduler["pre_open_minute"] = pre_open_minute
     _write_config_document(config_data)
@@ -914,11 +922,12 @@ def _settings_view(app_config: AppYamlConfig, db: Session | None = None) -> dict
             "scheduler_mode": app_config.scheduler.mode,
             "scheduler_mode_options": [
                 {"value": "interval", "label": "每半小时"},
-                {"value": "noon", "label": "中午一次"},
-                {"value": "pre_open", "label": "开盘前半小时"},
+                {"value": "custom_time", "label": "每日指定时间"},
+                {"value": "market_daily", "label": "开盘前及中午各一次"},
             ],
             "interval_minutes": app_config.scheduler.interval_minutes,
             "scheduler_timezone": app_config.scheduler.timezone,
+            "custom_time": _time_input_value(app_config.scheduler.custom_hour, app_config.scheduler.custom_minute),
             "noon_time": _time_input_value(app_config.scheduler.noon_hour, app_config.scheduler.noon_minute),
             "pre_open_time": _time_input_value(app_config.scheduler.pre_open_hour, app_config.scheduler.pre_open_minute),
             "weights": [

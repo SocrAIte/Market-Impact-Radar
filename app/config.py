@@ -11,7 +11,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 TimeWindow = Literal["6h", "24h", "3d", "7d"]
-SchedulerMode = Literal["interval", "noon", "pre_open"]
+SchedulerMode = Literal["interval", "custom_time", "market_daily", "noon", "pre_open"]
 PushSourceScope = Literal["all", "domestic", "foreign"]
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -51,6 +51,8 @@ class SchedulerConfig(BaseModel):
     mode: SchedulerMode = "interval"
     interval_minutes: int = 30
     timezone: str = "Asia/Shanghai"
+    custom_hour: int = 18
+    custom_minute: int = 0
     noon_hour: int = 12
     noon_minute: int = 0
     pre_open_hour: int = 9

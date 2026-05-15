@@ -359,28 +359,32 @@
                 </select>
               </div>
             </div>
-            <div class="col-lg-4">
+            <div class="col-lg-5">
               <div class="config-card p-3 h-100">
                 <label class="form-label small fw-semibold">时间设置</label>
                 <div class="row g-2">
-                  <div class="col-4">
+                  <div class="col-6 col-xl-3">
                     <div class="small text-secondary mb-1">间隔</div>
                     <input class="form-control" name="interval_minutes" type="number" min="5" max="1440" value="{{ settings_view.scoring.interval_minutes }}" title="间隔分钟">
                   </div>
-                  <div class="col-4">
-                    <div class="small text-secondary mb-1">中午</div>
-                    <input class="form-control" name="noon_time" type="time" value="{{ settings_view.scoring.noon_time }}" title="中午推送时间">
+                  <div class="col-6 col-xl-3">
+                    <div class="small text-secondary mb-1">指定时间</div>
+                    <input class="form-control" name="custom_time" type="time" value="{{ settings_view.scoring.custom_time }}" title="每日指定推送时间">
                   </div>
-                  <div class="col-4">
+                  <div class="col-6 col-xl-3">
                     <div class="small text-secondary mb-1">开盘前</div>
                     <input class="form-control" name="pre_open_time" type="time" value="{{ settings_view.scoring.pre_open_time }}" title="开盘前推送时间">
                   </div>
+                  <div class="col-6 col-xl-3">
+                    <div class="small text-secondary mb-1">中午</div>
+                    <input class="form-control" name="noon_time" type="time" value="{{ settings_view.scoring.noon_time }}" title="中午推送时间">
+                  </div>
                 </div>
                 <input type="hidden" name="scheduler_timezone" value="{{ settings_view.scoring.scheduler_timezone }}">
-                <div class="small text-secondary mt-2">依次用于：间隔分钟、中午一次、开盘前半小时。</div>
+                <div class="small text-secondary mt-2">“开盘前及中午各一次”会在开盘前时间和中午时间各推送一次。</div>
               </div>
             </div>
-            <div class="col-lg-4">
+            <div class="col-lg-3">
               <div class="config-card p-3 h-100">
                 <label class="form-label small fw-semibold">推送来源范围</label>
                 <select class="form-select" name="push_source_scope">

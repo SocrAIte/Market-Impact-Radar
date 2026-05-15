@@ -145,9 +145,11 @@ scoring:
 
 scheduler:
   enabled: true
-  mode: interval # interval / noon / pre_open
+  mode: interval # interval / custom_time / market_daily
   interval_minutes: 30
   timezone: Asia/Shanghai
+  custom_hour: 18
+  custom_minute: 0
   noon_hour: 12
   noon_minute: 0
   pre_open_hour: 9
