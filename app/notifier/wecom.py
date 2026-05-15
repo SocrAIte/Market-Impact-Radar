@@ -190,6 +190,16 @@ class WeComNotifier:
                     continue
                 fresh_analysis = await self._ensure_llm_analysis_before_push(db, fresh_cluster, fresh_analysis)
                 result.attempted += 1
+                if _analysis_needs_llm(fresh_analysis):
+                    result.skipped += 1
+                    logger.warning(
+                        "Skipped WeCom push for cluster {} because API analysis is not available.",
+                        fresh_cluster.id,
+                    )
+                    db.commit()
+                    if result.attempted >= effective_limit:
+                        break
+                    continue
                 record = await self.push_event(db, fresh_cluster, fresh_analysis, scoped_articles)
                 if record is None:
                     continue
