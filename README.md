@@ -10,11 +10,11 @@
 
 ## 当前版本
 
-**v0.1 minimal reproducible release**
+**v0.1.1 push-safety release**
 
 这是 market-impact-radar 的最小可复现开源版本，保留核心运行链路：新闻抓取、基础去重、事件聚类、规则评分、LLM 中文分析、Dashboard 展示和企业微信推送。
 
-当前版本以 SQLite、FastAPI、Jinja2 Dashboard 和企业微信机器人为主，适合本地运行、二次开发和验证产品方向。企业微信推送已支持固定间隔、每日指定时间、开盘前及中午各一次，以及国内/国外来源范围过滤。测试脚本、扩展文档和历史运行数据未包含在最小发布目录中。
+当前版本以 SQLite、FastAPI、Jinja2 Dashboard 和企业微信机器人为主，适合本地运行、二次开发和验证产品方向。企业微信推送已支持固定间隔、每日指定时间、开盘前及中午各一次，以及国内/国外来源范围过滤。v0.1.1 进一步加入推送前 API 分析门禁：高分事件必须完成 API 分析后才会推送，未完成分析的事件会跳过本轮推送；紧急事件会优先进入推送前分析流程。测试脚本、扩展文档和历史运行数据未包含在最小发布目录中。
 
 ---
 
@@ -36,6 +36,8 @@
 - **影响资产识别**：识别股票、指数、行业、大宗商品、外汇、债券和国家/地区。
 - **企业微信推送**：高影响事件自动推送到企业微信群机器人，支持每半小时、每日指定时间、开盘前及中午各一次等策略。
 - **推送范围过滤**：企业微信推送可选择国内外同时推送、只推送国内来源或只推送国外来源。
+- **推送前分析门禁**：达到推送条件的事件会先补 API 分析；未完成 API 分析的事件不会发送到企业微信。
+- **紧急事件优先**：90 分以上或央行利率、战争冲突、制裁、监管、银行金融风险等事件优先进入推送前分析流程。
 - **Dashboard**：FastAPI + Jinja2 + Bootstrap 的轻量 Web Dashboard。
 - **回测与评分校准**：预留评分回测、阈值校准和历史事件评估路线。
 
@@ -49,6 +51,8 @@
 - **Affected asset detection** for stocks, indices, sectors, commodities, FX, bonds, and countries.
 - **Enterprise WeChat alerts** for high-impact events with interval, custom daily time, or market-day pre-open/noon schedules.
 - **Push source filtering** for all sources, domestic-only sources, or foreign-only sources.
+- **Pre-push API analysis gate** so high-impact events are pushed only after API/LLM analysis succeeds.
+- **Urgent-event priority** for very high scores and critical event types before WeCom delivery.
 - **Dashboard** built with FastAPI, Jinja2, and Bootstrap.
 - **Backtesting and score calibration** planned for historical evaluation.
 
@@ -228,6 +232,7 @@ market_impact_score =
 
 ## 路线图
 
+- **v0.1.1 推送安全补丁**：推送前强制 API 分析门禁，未完成 API 分析的高分事件不推送；紧急事件优先进入 API 分析流程。
 - **v0.1 MVP**：基础抓取、基础去重、事件聚类、规则评分、LLM 中文分析、Dashboard、企业微信推送、可配置推送时间和国内/国外推送范围。
 - **v0.2 多源聚类**：更强实体识别、跨语言聚类、近重复检测、embedding/pgvector 支持，减少同一事件重复展示和重复推送。
 - **v0.3 并发 AI 分析**：完善 LLM API 并发队列、限流、重试、失败回退、成本控制和批量分析状态追踪。
