@@ -14,7 +14,7 @@
 
 这是 market-impact-radar 的最小可复现开源版本，保留核心运行链路：新闻抓取、基础去重、事件聚类、规则评分、LLM 中文分析、Dashboard 展示和企业微信推送。
 
-当前版本以 SQLite、FastAPI、Jinja2 Dashboard 和企业微信机器人为主，适合本地运行、二次开发和验证产品方向。测试脚本、扩展文档和历史运行数据未包含在最小发布目录中。
+当前版本以 SQLite、FastAPI、Jinja2 Dashboard 和企业微信机器人为主，适合本地运行、二次开发和验证产品方向。企业微信推送已支持固定间隔、每日指定时间、开盘前及中午各一次，以及国内/国外来源范围过滤。测试脚本、扩展文档和历史运行数据未包含在最小发布目录中。
 
 ---
 
@@ -34,7 +34,8 @@
 - **市场影响评分**：按 `market_impact_score` 降序排序，而不是按发布时间排序。
 - **中文摘要**：生成一句话中文事实摘要和中文影响路径解释。
 - **影响资产识别**：识别股票、指数、行业、大宗商品、外汇、债券和国家/地区。
-- **企业微信推送**：高影响事件自动推送到企业微信群机器人。
+- **企业微信推送**：高影响事件自动推送到企业微信群机器人，支持每半小时、每日指定时间、开盘前及中午各一次等策略。
+- **推送范围过滤**：企业微信推送可选择国内外同时推送、只推送国内来源或只推送国外来源。
 - **Dashboard**：FastAPI + Jinja2 + Bootstrap 的轻量 Web Dashboard。
 - **回测与评分校准**：预留评分回测、阈值校准和历史事件评估路线。
 
@@ -46,7 +47,8 @@
 - **Market impact scoring** sorted by `market_impact_score`, not publish time.
 - **Chinese summaries** and market transmission-path explanations.
 - **Affected asset detection** for stocks, indices, sectors, commodities, FX, bonds, and countries.
-- **Enterprise WeChat alerts** for high-impact events.
+- **Enterprise WeChat alerts** for high-impact events with interval, custom daily time, or market-day pre-open/noon schedules.
+- **Push source filtering** for all sources, domestic-only sources, or foreign-only sources.
 - **Dashboard** built with FastAPI, Jinja2, and Bootstrap.
 - **Backtesting and score calibration** planned for historical evaluation.
 
@@ -156,6 +158,13 @@ scheduler:
   pre_open_minute: 0
 ```
 
+推送策略说明：
+
+- `scheduler.mode = interval`：按 `interval_minutes` 间隔自动扫描并推送，默认每 30 分钟一次。
+- `scheduler.mode = custom_time`：每天在 `custom_hour/custom_minute` 指定时间扫描并推送一次。
+- `scheduler.mode = market_daily`：每天在 `pre_open_hour/pre_open_minute` 和 `noon_hour/noon_minute` 各扫描并推送一次，适合开盘前与午间摘要。
+- `scoring.push_source_scope = all`：国内和国外来源都可推送；设置为 `domestic` 时只推送国内来源，设置为 `foreign` 时只推送国外来源。
+
 ---
 
 ## 评分逻辑
@@ -187,6 +196,8 @@ market_impact_score =
 
 ## 企业微信推送示例
 
+企业微信消息默认保持精简，只推送高影响事件的核心判断、来源、时间、原文链接和免责声明，避免把完整分析报告刷屏。是否自动推送以及推送时间，可在 Dashboard 的“评分与推送配置”中调整。
+
 ```text
 # 全球市场新闻雷达
 
@@ -217,7 +228,7 @@ market_impact_score =
 
 ## 路线图
 
-- **v0.1 MVP**：基础抓取、基础去重、事件聚类、规则评分、LLM 中文分析、Dashboard、企业微信推送。
+- **v0.1 MVP**：基础抓取、基础去重、事件聚类、规则评分、LLM 中文分析、Dashboard、企业微信推送、可配置推送时间和国内/国外推送范围。
 - **v0.2 多源聚类**：更强实体识别、跨语言聚类、近重复检测、embedding/pgvector 支持，减少同一事件重复展示和重复推送。
 - **v0.3 并发 AI 分析**：完善 LLM API 并发队列、限流、重试、失败回退、成本控制和批量分析状态追踪。
 - **v0.4 回测与评分校准**：历史事件回测、评分校准、阈值评估、不同市场环境下的权重优化。
