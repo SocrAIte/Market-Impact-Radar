@@ -14,6 +14,7 @@ from app.config import get_app_config, get_settings
 from app.models import Article, EventCluster, MarketImpactAnalysis, PushRecord
 from app.schemas import MarketImpactLLMOutput
 from app.utils.hashing import stable_hash
+from app.utils.logging import logger
 from app.utils.time import ensure_aware, utcnow
 
 
@@ -187,6 +188,7 @@ class WeComNotifier:
                 scoped_articles = _filter_articles_by_scope(articles, self.source_scope)
                 if not scoped_articles:
                     continue
+                fresh_analysis = await self._ensure_llm_analysis_before_push(db, fresh_cluster, fresh_analysis)
                 result.attempted += 1
                 record = await self.push_event(db, fresh_cluster, fresh_analysis, scoped_articles)
                 if record is None:
@@ -203,6 +205,29 @@ class WeComNotifier:
                 if result.attempted >= effective_limit:
                     break
             return result
+
+    async def _ensure_llm_analysis_before_push(
+        self,
+        db: Session,
+        cluster: EventCluster,
+        analysis: MarketImpactAnalysis,
+    ) -> MarketImpactAnalysis:
+        if not get_settings().llm_enabled or not _analysis_needs_llm(analysis):
+            return analysis
+
+        # Lazy import avoids a module-level cycle: ingest imports WeComNotifier for push delivery.
+        from app.pipeline.ingest import analyze_existing_cluster_once
+
+        result = await analyze_existing_cluster_once(db, cluster, allow_push=False)
+        if result.llm_failed:
+            logger.warning(
+                "Pre-push LLM analysis failed for cluster {}: {}",
+                cluster.id,
+                result.llm_error or "unknown error",
+            )
+        db.flush()
+        db.refresh(cluster)
+        return _latest_analysis_for_cluster(db, cluster.id) or analysis
 
     def can_push(
         self,
@@ -327,6 +352,19 @@ def _latest_high_impact_rows(
             .limit(limit)
         ).all()
     )
+
+
+def _latest_analysis_for_cluster(db: Session, cluster_id: int) -> MarketImpactAnalysis | None:
+    return db.execute(
+        select(MarketImpactAnalysis)
+        .where(MarketImpactAnalysis.event_cluster_id == cluster_id)
+        .order_by(desc(MarketImpactAnalysis.created_at), desc(MarketImpactAnalysis.id))
+        .limit(1)
+    ).scalar_one_or_none()
+
+
+def _analysis_needs_llm(analysis: MarketImpactAnalysis) -> bool:
+    return analysis.model_name in {"rules-only", "rules-fallback"}
 
 
 def _cluster_articles(db: Session, cluster_id: int) -> list[Article]:
