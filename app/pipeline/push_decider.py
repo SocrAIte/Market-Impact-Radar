@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.config import ScoringConfig
 from app.models import EventCluster, MarketImpactAnalysis, PushRecord
 from app.schemas import MarketImpactLLMOutput
-from app.utils.time import utcnow
+from app.utils.time import ensure_aware, utcnow
 
 
 @dataclass(slots=True)
@@ -38,7 +38,8 @@ def evaluate_push(
         return PushDecision(True, "评分超过阈值，且该事件尚未推送。")
 
     duplicate_window = timedelta(hours=scoring_config.duplicate_push_window_hours)
-    if utcnow() - latest_push.pushed_at > duplicate_window:
+    last_pushed_at = ensure_aware(latest_push.pushed_at) or utcnow()
+    if utcnow() - last_pushed_at > duplicate_window:
         return PushDecision(True, "距离上次推送已超过去重窗口。")
 
     previous_score = _latest_analysis_score(db, cluster.id)
