@@ -68,6 +68,19 @@ DOMESTIC_SOURCE_TYPES = {
     "china_exchange",
 }
 
+P0_EVENT_TERMS = {
+    "央行利率",
+    "战争冲突",
+    "制裁",
+    "出口管制",
+    "监管",
+    "银行金融风险",
+    "地缘政治",
+    "能源",
+    "系统性金融风险",
+    "A股重大政策",
+}
+
 
 @dataclass(slots=True)
 class WeComPushResult:
@@ -177,8 +190,9 @@ class WeComNotifier:
         async with _PUSH_BATCH_LOCK:
             effective_limit = min(limit or self.max_events_per_run, self.max_events_per_run, 10)
             result = WeComPushResult(errors=[])
-            candidate_limit = max(effective_limit * 10, 100)
-            for cluster, analysis in _latest_high_impact_rows(db, self.threshold, candidate_limit):
+            candidate_limit = max(effective_limit * 20, 200)
+            candidates = _prioritize_high_impact_rows(_latest_high_impact_rows(db, self.threshold, candidate_limit))
+            for cluster, analysis in candidates:
                 db.expire_all()
                 fresh_cluster = db.get(EventCluster, cluster.id)
                 fresh_analysis = db.get(MarketImpactAnalysis, analysis.id)
@@ -362,6 +376,28 @@ def _latest_high_impact_rows(
             .limit(limit)
         ).all()
     )
+
+
+def _prioritize_high_impact_rows(
+    rows: Sequence[tuple[EventCluster, MarketImpactAnalysis]],
+) -> list[tuple[EventCluster, MarketImpactAnalysis]]:
+    return sorted(rows, key=lambda row: (_analysis_priority(row[0], row[1]), -row[1].market_impact_score, -_cluster_time_key(row[0])))
+
+
+def _analysis_priority(cluster: EventCluster, analysis: MarketImpactAnalysis) -> int:
+    if analysis.market_impact_score >= 90:
+        return 0
+    haystack = f"{analysis.event_type} {cluster.event_type or ''} {cluster.title}".casefold()
+    if any(term.casefold() in haystack for term in P0_EVENT_TERMS):
+        return 0
+    if analysis.market_impact_score >= 80:
+        return 1
+    return 2
+
+
+def _cluster_time_key(cluster: EventCluster) -> float:
+    value = ensure_aware(cluster.last_seen_at)
+    return value.timestamp() if value else 0.0
 
 
 def _latest_analysis_for_cluster(db: Session, cluster_id: int) -> MarketImpactAnalysis | None:
